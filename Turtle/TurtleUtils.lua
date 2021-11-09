@@ -40,22 +40,22 @@ function t.getSlot(id)
 end
 
 function t.getSlotTab(tab)
-    for slot = 1, invSize do
-        local item = getItemDetail(slot);
-        if (item) then
-            local same = false;
-            for key, value in pairs(tab) do
-                if (item[key] == value) then same = true; end
-            end
-            if (same) then return slot; end
-        end
-    end
+  for slot = 1, invSize do
+      local item = getItemDetail(slot);
+      if (item) then
+          local same = false;
+          for key, value in pairs(tab) do
+              if (item[key] == value) then same = true; end
+          end
+          if (same) then return slot; end
+      end
+  end
 end
 
 function t.drop(slot, side)
   turtle.select(slot);
   local fn = dropSides[side];
-  if (fn) then fn(); end
+  if (fn) then return fn(); end
 end
 
 function t.dropAll(side)
@@ -65,29 +65,37 @@ function t.dropAll(side)
   end
 end
 
+function t.full()
+  local emptySlot = false;
+  for i = 1, invSize do
+    if (not turtle.getItemDetail(i)) then emptySlot = true; break end
+  end
+  return not emptySlot;
+end
+
 function t.go(side)
   local fn = goSides[side];
-  if (fn) then fn(); end
+  if (fn) then return fn(); end
 end
 
 function t.turn(side)
   local fn = turnSides[side];
-  if (fn) then fn(); end
+  if (fn) then return fn(); end
 end
 
 function t.dig(side)
   local fn = digSides[side];
-  if (fn) then fn(); end
+  if (fn) then return fn(); end
 end
 
 function t.place(side)
   local fn = placeSides[side];
-  if (fn) then fn(); end
+  if (fn) then return fn(); end
 end
 
 function t.inspect(side)
   local fn = inspectSides[side];
-  if (fn) then fn(); end
+  if (fn) then return fn(); end
 end
 
 function t.goDig(side)
