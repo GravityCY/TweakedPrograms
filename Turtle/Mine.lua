@@ -5,6 +5,8 @@ local args = {...};
 
 local x,y,z;
 
+local mx, my, mz = 0, 0, 0;
+
 local iSlot;
 
 local isForward = true;
@@ -60,29 +62,28 @@ local function home()
   end
 end
 
-local function dumpInventory(cx, cy, cz)
-  local distX = cx;
-  if (not isForward) then distX = x - cx; end
-  if (cz == 1) then tUtils.turn(sides.back);
+local function dumpInventory()
+  if (mz == 0) then tUtils.turn(sides.back);
   else 
     if (isForward) then
       tUtils.turn(sides.left);
-      doRepeat(tUtils.goDig, z - cz + 1, sides.forward);
+      doRepeat(tUtils.goDig, mz, sides.forward);
       tUtils.turn(sides.left);
     else
       tUtils.turn(sides.right);
-      doRepeat(tUtils.goDig, z - cz + 1, sides.forward);
+      doRepeat(tUtils.goDig, mz, sides.forward);
       tUtils.turn(sides.left);
     end
   end
-  doRepeat(tUtils.goDig, distX, sides.forward);
-  sleep(5);
+  doRepeat(tUtils.goDig, mx, sides.forward);
 end
 
 local function moveMine()
   tUtils.goDig(sides.forward);
   tUtils.dig(sides.up);
   tUtils.dig(sides.down);
+  if (isForward) then mx = mx + 1;
+  else mx = mx - 1; end
 end
 
 local function corner()
@@ -90,6 +91,7 @@ local function corner()
   moveMine();
   turn(isForward);
   isForward = not isForward;
+  mz = mz + 1;
 end
 
 local function layerDown()
@@ -106,9 +108,7 @@ local function main()
   for yNow = 1, y do
     for zNow = 1, z do
       for xNow = 1, x do
-        if (zNow == 1 and xNow == 4) then
-          dumpInventory(xNow, yNow, zNow);
-        end
+        if (zNow == 2 and xNow == 4) then dumpInventory(); end
         moveMine();
       end
       if (zNow ~= z) then corner(); end

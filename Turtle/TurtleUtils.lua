@@ -26,6 +26,10 @@ local inspectSides = { [sides.forward]=turtle.inspect,
                       [sides.down]=turtle.inspectDown,
                       [sides.up]=turtle.inspectUp };
 
+local dropSides = { [sides.forward]=turtle.drop,
+                      [sides.down]=turtle.dropDown,
+                      [sides.up]=turtle.dropUp };
+
 local getItemDetail = turtle.getItemDetail;
 
 function t.getSlot(id)
@@ -48,24 +52,42 @@ function t.getSlotTab(tab)
     end
 end
 
+function t.drop(slot, side)
+  turtle.select(slot);
+  local fn = dropSides[side];
+  if (fn) then fn(); end
+end
+
+function t.dropAll(side)
+  for i = 1, invSize do
+    local item = turtle.getItemDetail(i);
+    if (item) then t.drop(i, side); end
+  end
+end
+
 function t.go(side)
-  return goSides[side]();
+  local fn = goSides[side];
+  if (fn) then fn(); end
 end
 
 function t.turn(side)
-  return turnSides[side]();
+  local fn = turnSides[side];
+  if (fn) then fn(); end
 end
 
 function t.dig(side)
-  return digSides[side]();
+  local fn = digSides[side];
+  if (fn) then fn(); end
 end
 
 function t.place(side)
-  return placeSides[side]();
+  local fn = placeSides[side];
+  if (fn) then fn(); end
 end
 
 function t.inspect(side)
-  return inspectSides[side]();
+  local fn = inspectSides[side];
+  if (fn) then fn(); end
 end
 
 function t.goDig(side)
