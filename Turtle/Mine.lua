@@ -9,6 +9,8 @@ local mx, my, mz = 0, 0, 0;
 local iSlot = nil;
 local isForward = true;
 
+local diName = "metalbarrels:gold_barrel";
+
 local function doRepeat(fn, times, ...)
   for i = 1, times do fn(...); end
 end
@@ -29,7 +31,7 @@ local function getXYZ()
 end
 
 local function checkInv()
-  iSlot = tUtils.getSlot("minecraft:barrel");
+  iSlot = tUtils.getSlot(diName);
   if (not iSlot) then
     print("Please insert a Barrel for me to dump items.");
     error();
