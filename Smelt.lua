@@ -63,7 +63,6 @@ local function extract()
     if (not hasItem) then break end
     sleep(1);
   end
-  local eTime = os.clock();
 end
 
 local function smelt()
@@ -87,6 +86,7 @@ local function smelt()
     end
   end
   extract();
+  local eTime = os.clock();
   print("Took " .. eTime - sTime .. " seconds...");
   if (speaker) then 
     for i = 1, 3 do

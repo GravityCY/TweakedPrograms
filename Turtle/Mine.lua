@@ -9,7 +9,7 @@ local mx, my, mz = 0, 0, 0;
 local iSlot = nil;
 local isForward = true;
 
-local diName = "metalbarrels:gold_barrel";
+local diName = "occultism:stable_wormhole";
 
 local function doRepeat(fn, times, ...)
   for i = 1, times do fn(...); end
@@ -33,7 +33,7 @@ end
 local function checkInv()
   iSlot = tUtils.getSlot(diName);
   if (not iSlot) then
-    print("Please insert a Barrel for me to dump items.");
+    print("Please insert a Wormhole for me to dump items.");
     error();
   end
 end
@@ -42,6 +42,15 @@ local function turn(right)
   local side = sides.left;
   if (right) then side = sides.right end
   tUtils.turn(side);
+end
+
+local function dumpInventory()
+  turtle.select(tUtils.getSlot(diName));
+  tUtils.dig(sides.down);
+  tUtils.place(sides.down);
+  tUtils.dropAll(sides.down);
+  turtle.select(1);
+  tUtils.dig(sides.down);
 end
 
 local function home()
@@ -56,19 +65,7 @@ local function home()
   end
   doRepeat(tUtils.goDig, mx, sides.forward);
   tUtils.turn(sides.back);
-  tUtils.dropAll(sides.down);
-end
-
-local function dumpInventory()
-  local prevX, prevY, prevZ = mx, my, mz;
-  home();
-  doRepeat(tUtils.goDig, prevX, sides.forward);
-  if (prevZ ~= 0) then
-    tUtils.turn(sides.right);
-    doRepeat(tUtils.goDig, prevZ, sides.forward);
-    if (isForward) then tUtils.turn(sides.left);
-    else tUtils.turn(sides.right); end
-  end
+  dumpInventory();
 end
 
 local function moveMine()
@@ -82,6 +79,14 @@ local function xMove()
   else mx = mx - 1; end
 end
 
+local function yMove()
+  my = my - 1;
+end
+
+local function zMove()
+  mz = mz + 1;
+end
+
 local function corner()
   turn(isForward);
   moveMine();
@@ -93,14 +98,11 @@ local function layerDown()
   doRepeat(tUtils.turn, 2, sides.right);
   tUtils.goDig(sides.down);
   tUtils.dig(sides.down);
-  my = my - 1;
 end
 
 local function main()
   tUtils.dig(sides.up);
   tUtils.dig(sides.down);
-  turtle.select(iSlot);
-  tUtils.place(sides.down);
   moveMine();
   xMove();
   for yNow = 1, y do
@@ -112,10 +114,13 @@ local function main()
       end
       if (zNow ~= z) then 
         corner(); 
-        mz = mz + 1;
+        zMove();
       end
     end
-    if (yNow ~= y) then layerDown(); end
+    if (yNow ~= y) then 
+      layerDown(); 
+      yMove();
+    end
   end
   home();
 end
