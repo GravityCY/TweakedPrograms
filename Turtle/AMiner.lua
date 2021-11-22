@@ -4,6 +4,7 @@ local sides = tUtils.sides;
 local args = {...};
 
 local ix, iy, iz = 0, 0, 0;
+local ax, ai, az = 0, 0, 0;
 local mx, my, mz = 0, 0, 0;
 local iSlot = nil;
 
@@ -11,6 +12,7 @@ local up = true;
 local right = true;
 local isForward = true;
 local goRight = true;
+local away = true;
 
 local diName = "occultism:stable_wormhole";
 
@@ -31,6 +33,7 @@ local function setup()
     iy = tonumber(args[2]);
     iz = tonumber(args[3]);
   end
+  ax, ay, az = math.abs(ix), math.abs(iy), math.abs(iz);
   if (iy < 0) then up = false; end
   if (iz < 0) then right = false; goRight = false end
 end
@@ -58,6 +61,7 @@ end
 local function dumpInventory()
   turtle.select(tUtils.getSlot(diName));
   tUtils.turn(sides.back);
+  tUtils.dig(sides.forward);
   tUtils.place(sides.forward);
   tUtils.dropAll(sides.forward);
   turtle.select(1);
@@ -72,14 +76,23 @@ local function home()
   if (isForward) then tx, tz = -tx, -tz; end
   print(tx,ty,tz);
   tUtils.goPos(tx, ty, tz);
-  if (mz ~= 0) then turn(right); end
-  if (my % 2 ~= 0) then tUtils.turn(sides.back); end
+  if (mz == 0) then
+    if (not isForward) then
+      tUtils.turn(sides.back);
+    end
+  else turn(right); end
   tUtils.go(sides.back);
   dumpInventory();
 end
 
+local function digVertical()
+  if (my+1 < iy) then tUtils.dig(sides.up); end
+  if (my-1 >= 0) then tUtils.dig(sides.down); end
+end
+
 local function moveMine()
   tUtils.goDig(sides.forward);
+  digVertical();
 end
 
 local function corner()
@@ -90,42 +103,53 @@ local function corner()
   isForward = not isForward;
 end
 
-local function layer()
+local function layer(times)
   doRepeat(tUtils.turn, 2, sides.right);
-  vertical(up);
+  doRepeat(vertical, times, up);
+  digVertical();
   isForward = not isForward;
+  away = not away;
 end
 
 local function xMove()
-  if (isForward) then mx = mx + 1;
-  else mx = mx - 1; end
+  local add = 1;
+  if (not isForward) then add = -1; end
+  mx = mx + add;
   moveMine();
 end
 
 local function yMove()
-  local add = 1;
+  local add = iy - my - 1;
+  if (iy - my - 1 >= 3) then add = 3 end
   my = my + add;
-  layer();
+  layer(add);
 end
 
 local function zMove()
-  local add = (my % 2 ~= 0 and -1) or 1;
+  local add = -1;
+  if (away) then add = 1; end
+  print("Corner : " .. add);
   mz = mz + add;
   corner();
 end
 
 local function main()
-  local absx, absy, absz = math.abs(ix), math.abs(iy), math.abs(iz);
+  local limitX, limitY, limitZ = ax, ay, az;
+  if (ay >= 3) then 
+    limitY = math.ceil(ay / 3); 
+    vertical(true);
+    my = 1;
+  end
   xMove();
-  for y = 1, absy do
-    for z = 1, absz do
-      for x = 1, absx - 1 do
-        if (tUtils.full()) then dumpInventory(); end
+  for y = 1, limitY do
+    for z = 1, limitZ do
+      for x = 1, limitX - 1 do
         xMove();
+        if (tUtils.full()) then dumpInventory(); end
       end
-      if (z ~= absz) then zMove(); end
+      if (z ~= limitZ) then zMove(); end
     end
-    if (y ~= absy) then yMove(); end
+    if (y ~= limitY) then yMove(); end
   end
   home();
 end
