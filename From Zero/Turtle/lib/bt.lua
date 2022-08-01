@@ -37,7 +37,7 @@ end
 
 function t.place(side, name)
   local f = placeSides[side];
-  if (not t.select(name)) then return false end
+  if (name ~= nil and t.select(name)) then return false end
   if (f ~= nil) then return f(); end
 end
 
