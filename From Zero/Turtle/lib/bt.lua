@@ -5,8 +5,20 @@ local digSides = {[sides.up]=turtle.digUp, [sides.down]=turtle.digDown, [sides.f
 local goSides = {[sides.up]=turtle.up, [sides.down]=turtle.down, [sides.forward]=turtle.forward, [sides.back]=turtle.back};
 local turnSides = {[sides.left]=turtle.turnLeft, [sides.right]=turtle.turnRight, [sides.back]=function() turtle.turnRight(); turtle.turnRight(); end};
 local dropSides = {[sides.down]=turtle.dropDown, [sides.up]=turtle.dropUp, [sides.forward]=turtle.drop, [sides.back]=function(amount) turtle.turnRight(); turtle.turnRight(); turtle.drop(amount) end};
+local placeSides = {[sides.down]=turtle.placeDown, [sides.forward]=turtle.place, [sides.up]=turtle.placeUp};
 
 t.sides = sides;
+
+function t.select(name)
+  for i = 1, 16 do
+    local item = turtle.getItemDetail(i);
+    if (item ~= nil and item.name == name) then
+      turtle.select(i);
+      return true;
+    end
+  end
+  return false;
+end
 
 function t.dig(side)
   local f = digSides[side];
@@ -20,6 +32,12 @@ end
 
 function t.turn(side)
   local f = turnSides[side];
+  if (f ~= nil) then return f(); end
+end
+
+function t.place(side, name)
+  local f = placeSides[side];
+  if (not t.select(name)) then return false end
   if (f ~= nil) then return f(); end
 end
 

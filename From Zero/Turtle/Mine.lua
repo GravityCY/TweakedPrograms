@@ -2,7 +2,6 @@ local bt = require("bt");
 local tu = require("tu");
 
 local isForward = true;
-
 local mx, mz;
 
 mx = tu.getInput(true, tu.types.number, "Enter Forward: ");
