@@ -13,17 +13,17 @@ end
 local function printCenterX(str)
   local mx, my = term.getCursorPos();
   term.setCursorPos(getCenterX(str), my);
-  print(str);
+  write(str);
 end
 
 local function printCenterXY(str, index, size)
   term.setCursorPos(getCenterX(str), getCenterY(str, index, size));
-  print(str);
+  write(str);
 end
 
 local function printAll(strs) 
   for index, str in pairs(strs) do
-    print(str);
+    write(str);
   end
 end
 
@@ -60,7 +60,7 @@ function t.select(list)
       local str = selection;
       if (index == selected) then str = prefix .. str .. postfix; end
       if (center) then printCenterXY(str, index, size);
-      else print(str); end
+      else write(str); end
     end
     local mx, my = term.getSize();
     term.setCursorPos(1, my - 1);

@@ -1,12 +1,13 @@
 local bt = require("bt");
+local tu = require("tu");
 
 local isForward = true;
 
 local mx, my, mz;
 
-mx = tonumber(read());
-my = tonumber(read());
-mz = tonumber(read());
+mx = tu.getInput(true, tu.types.number, "Enter Forward: ");
+my = tu.getInput(true, tu.types.number, "Enter Up: ");
+mz = tu.getInput(true, tu.types.number, "Enter Right: ");
 
 local function right()
   if (isForward) then turtle.turnRight();

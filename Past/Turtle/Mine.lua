@@ -33,7 +33,7 @@ end
 local function checkInv()
   iSlot = tUtils.getSlot(diName);
   if (not iSlot) then
-    print("Please insert a Wormhole for me to dump items.");
+    write("Please insert a Wormhole for me to dump items.");
     error();
   end
 end

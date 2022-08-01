@@ -30,4 +30,4 @@ local function sort(list)
   return list;
 end
 
-print(textutils.serialise(sort(nums)));
+write(textutils.serialise(sort(nums)));

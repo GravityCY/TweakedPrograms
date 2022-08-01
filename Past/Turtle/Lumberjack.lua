@@ -130,6 +130,6 @@ while true do
   tu.turn(sides.back);
   tu.dropAll(sides.down, blacklist);
   turtle.select(1);
-  print("Sleeping for " .. sleepTime .. " seconds.");
+  write("Sleeping for " .. sleepTime .. " seconds.");
   sleep(sleepTime);
 end

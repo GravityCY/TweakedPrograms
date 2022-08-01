@@ -37,9 +37,9 @@ pu.doSort = false;
 
 function crafter.list()
   rednet.send(crafterID, nil, "list");
-  print("Waiting for listing");
+  write("Waiting for listing");
   local _, list = rednet.receive("list");
-  print("Got Listing.");
+  write("Got Listing.");
   return list;
 end
 
@@ -144,7 +144,7 @@ local function printFilter(input)
     if (displayName:lower():find(filter)) then counted[displayName] = (counted[displayName] or 0) + item.count end
   end
   for item, count in pairs(counted) do
-    print(string.format("%s %s, %.2f stacks.", count, item, count / 64));
+    write(string.format("%s %s, %.2f stacks.", count, item, count / 64));
   end
 end
 
@@ -228,7 +228,7 @@ local function save()
 end
 
 local function load()
-  print("Loading Inventories.");
+  write("Loading Inventories.");
   sn.load(dataPath);
   fs.makeDir(recipePath);
   buffer = iu.wrap(sn.getBuffer());
@@ -292,7 +292,7 @@ local function getInput()
 end
 
 local function sendRecipe(recipe, where, mult)
-  print("Sending Recipe: " .. recipe.productName);
+  write("Sending Recipe: " .. recipe.productName);
   for mat, mdata in pairs(recipe.materials) do
     for _, slot in ipairs(mdata.slots) do
       local sent = 0;
@@ -322,7 +322,7 @@ local function craftRecipe(recipe, amount)
     if (isAllSubrecipes) then
       for mat, need in pairs(needs) do
         if (need ~= 0) then
-          print("Crafting Subrecipe " .. mat .. " " .. need);
+          write("Crafting Subrecipe " .. mat .. " " .. need);
           local subrecipe = loadRecipe(mat);
           local success, subneeds = craftRecipe(subrecipe, need)
           if (not success) then return false, needs; end
@@ -347,8 +347,8 @@ local function printHelp(command, doPrintExample, doPrintDescription)
   if (doPrintDescription == nil) then doPrintDescription = false; end
   local str = command.name;
   if (doPrintDescription) then str = str .. " - " .. command.description; end
-  print(str);
-  if (doPrintExample and command.example) then print(command.example); end
+  write(str);
+  if (doPrintExample and command.example) then write(command.example); end
 end
 
 local function newOP(name, desc, fn, example)
@@ -366,18 +366,18 @@ if (isDebug) then
     term.clear();
     term.setCursorPos(1, 1);
     if (args[2] == "inv") then
-      for _, v in ipairs(sn.getInventories()) do print(v); end
+      for _, v in ipairs(sn.getInventories()) do write(v); end
     elseif (args[2] == "import") then
-      for _, v in ipairs(importerAddrs) do print(v); end
+      for _, v in ipairs(importerAddrs) do write(v); end
     elseif (args[2] == "buffer") then
-      print(sn.getBuffer());
+      write(sn.getBuffer());
     end
   end)
 end
 
 newOP("craft", "Crafts Items using the Crafty Turtle Connected to the Network", function(args)
   local op = args[2];
-  if (op == nil) then return print("Enter an ID, or register a new Recipe with 'new', or list all existing recipes with 'list'"); end
+  if (op == nil) then return write("Enter an ID, or register a new Recipe with 'new', or list all existing recipes with 'list'"); end
   if (op == "new") then
     term.clear();
     term.setCursorPos(1, 1);
@@ -385,11 +385,11 @@ newOP("craft", "Crafts Items using the Crafty Turtle Connected to the Network", 
     rednet.send(crafterID, nil, "new");
     local _, recipe = rednet.receive("recipe");
     saveRecipe(recipe);
-    print("Success!");
+    write("Success!");
   elseif (op == "list") then
     term.clear();
     term.setCursorPos(1, 1);
-    for _, path in pairs(fs.list(recipePath)) do print(({itemu.format(pathToID(path))})[1]); end
+    for _, path in pairs(fs.list(recipePath)) do write(({itemu.format(pathToID(path))})[1]); end
   else
     local id = op:lower();
     local count = args[3];
@@ -402,20 +402,20 @@ newOP("craft", "Crafts Items using the Crafty Turtle Connected to the Network", 
     for _, path in ipairs(fs.list(recipePath)) do
       if (path:find(id) ~= nil) then similar[#similar+1] = pathToID(path); end
     end
-    if (#similar == 0) then return print("Couldn't find anything similar to " .. id .. "..."); end
+    if (#similar == 0) then return write("Couldn't find anything similar to " .. id .. "..."); end
     local index = tu.select({ selections=similar });
-    if (index == nil) then return print("Canceled..."); end
+    if (index == nil) then return write("Canceled..."); end
     local selection = similar[index];
     local recipe = loadRecipe(selection);
-    if (recipe == nil) then return print("No such Recipe..."); end
+    if (recipe == nil) then return write("No such Recipe..."); end
     local success, needList = craftRecipe(recipe, count);
-    print("Crafting " .. count .. " " .. id .. "...");
-    if (success) then print("Succesfully crafted " .. count .. " " .. selection .. ".");
+    write("Crafting " .. count .. " " .. id .. "...");
+    if (success) then write("Succesfully crafted " .. count .. " " .. selection .. ".");
     else 
-      print("Not enough Materials..."); 
-      print("Missing: ")
+      write("Not enough Materials..."); 
+      write("Missing: ")
       for mat, need in pairs(needList) do 
-        if (need ~= 0) then print(need .. " " .. mat); end
+        if (need ~= 0) then write(need .. " " .. mat); end
       end
     end
   end
@@ -428,10 +428,10 @@ newOP("buffer", "Sets detection mode to Buffer, any inventory you add, will be m
   if (wasAdded) then
     -- requestInput("Enter an ID for the importer: ");
     sn.setBuffer(addr);
-    print("Succesfully added " .. addr);
+    write("Succesfully added " .. addr);
   else
     sn.setBuffer(nil);
-    print("Succesfully removed " .. addr);
+    write("Succesfully removed " .. addr);
   end
   buffer = iu.wrap(addr);
   save();
@@ -443,10 +443,10 @@ newOP("storage", "Sets detection mode to Storage, any inventory you add, will be
     if (addr ~= nil) then
       if (wasAdded) then
         sn.add(addr);
-        print("Succesfully added " .. addr);
+        write("Succesfully added " .. addr);
       else
         sn.remove(addr);
-        print("Succesfully removed " .. addr);
+        write("Succesfully removed " .. addr);
       end
       if (speaker) then speaker.playNote("harp", 1, 1); end
     else break end
@@ -462,11 +462,11 @@ newOP("import", "Imports Items into the network from a specific address", functi
     local periph = peripheral.wrap(addr);
     table.insert(importerAddrs, addr);
     table.insert(importerList, periph);
-    print("Succesfully added " .. addr);
+    write("Succesfully added " .. addr);
   else
     importerAddrs = tabu.remove(importerAddrs, function(value) return value == addr end);
     importerList = pu.toPeripheral(importerAddrs);
-    print("Succesfully removed " .. addr);
+    write("Succesfully removed " .. addr);
   end
   save();
 end)
@@ -483,11 +483,11 @@ newOP("export", "Exports an Item into an Inventory", function()
     periph.exportItem = item;
     table.insert(exporterAddrs, addr);
     table.insert(exporterList, periph);
-    print("Succesfully added " .. addr);
+    write("Succesfully added " .. addr);
   else
     exporterAddrs = tabu.remove(exporterAddrs, function(value) return value == addr end);
     exporterList = pu.toPeripheral(exporterAddrs);
-    print("Succesfully removed " .. addr);
+    write("Succesfully removed " .. addr);
   end
   save();
 end)
@@ -501,7 +501,7 @@ newOP("compact", "Compacts Items (Inefficiently)", function(args)
     local str = strf("Slot: %s / %s", slot, sn.capacity);
     term.clear();
     term.setCursorPos(tmx/2-#str/2, tmy/2);
-    print(str);
+    write(str);
   end);
   term.clear();
   term.setCursorPos(1, 1);
@@ -509,16 +509,16 @@ newOP("compact", "Compacts Items (Inefficiently)", function(args)
 end)
 
 newOP("sort", "Sorts all Items alphabetically (Using Their IDS)", function()
-  print("Sorting...");
+  write("Sorting...");
   sn.sort(function (slot)
     local str = strf("Slot: %s / %s", slot, sn.capacity);
     term.clear();
     term.setCursorPos(tmx/2-#str/2, tmy/2);
-    print(str);
+    write(str);
   end);
   term.clear();
   term.setCursorPos(1, 1);
-  print("Sorted.");
+  write("Sorted.");
   if (speaker) then doRepeat(function() speaker.playNote("harp", 1, 1); sleep(0.2); end, 3); end
   sn.toFile(dataPath);
 end);
@@ -527,7 +527,7 @@ newOP("full", "Displays how full the Storage Network is", function()
     term.clear();
     local str = strf("%d%% full.", sn.occupied() / sn.size() * 100);
     term.setCursorPos(tmx / 2 - #str / 2, tmy / 2);
-    print(str);
+    write(str);
     os.pullEvent("char");
     term.clear();
     term.setCursorPos(1, 1);
@@ -541,11 +541,11 @@ newOP("get", "Gets an Item using it's ID and puts it into the buffer chest", fun
   local ids = getSimilar(filter, sn.list());
   local names = {};
   for i = 1, #ids do names[i] = itemu.format(ids[i]); end
-  if (#ids == 0) then print("No Item Found");
+  if (#ids == 0) then write("No Item Found");
   else
     local pushed = 0;
     local selection = tu.select({selections=names, prefix="-> "});
-    if (selection == nil) then print("Canceled..."); return end
+    if (selection == nil) then write("Canceled..."); return end
     local itemName = ids[selection];
     if (amount == "all") then
       pushed = sn.pushAll(sn.getBuffer(), itemName);
@@ -553,7 +553,7 @@ newOP("get", "Gets an Item using it's ID and puts it into the buffer chest", fun
       amount = tonumber(amount);
       pushed = sn.push(sn.getBuffer(), itemName, amount);
     end
-    print(strf("Pushed %s %s.", pushed, itemName))
+    write(strf("Pushed %s %s.", pushed, itemName))
   end
 end);
 
@@ -563,13 +563,13 @@ newOP("put", "Puts an Item from the buffer chest in the system", function(args)
   if (not filter) then filter = requestInput("Enter Item Name: "); end
   if (filter == "all") then
     local pulled = sn.pullAll(sn.getBuffer());
-    print("Pulled " .. pulled .. ".");
+    write("Pulled " .. pulled .. ".");
     return
   else
     if (amount == nil) then amount = requestInput("Enter Amount: "); end
     local similar = getSimilar(filter, buffer.list());
     if (#similar == 0) then
-      print("No Item Found")
+      write("No Item Found")
     else
       local selection = similar[tu.select({selections=similar, prefix="-> "})];
       if (selection) then
@@ -580,8 +580,8 @@ newOP("put", "Puts an Item from the buffer chest in the system", function(args)
           amount = tonumber(amount);
           pulled = sn.pull(sn.getBuffer(), selection, amount);
         end
-        print("Pulled " .. pulled .. " " .. selection .. ".");
-      else print("Canceled..."); end
+        write("Pulled " .. pulled .. " " .. selection .. ".");
+      else write("Canceled..."); end
     end
   end
 end);
@@ -589,11 +589,11 @@ end);
 newOP("help", "Lists all Commands", function(args)
   term.clear();
   term.setCursorPos(1, 1);
-  print("Commands: ");
+  write("Commands: ");
   if (args and args[2]) then
     local op = ops[args[2]];
     if (op) then printHelp(op, true, true);
-    else print("No such Command."); end
+    else write("No such Command."); end
   else
     for _, op in pairs(opsList) do
       printHelp(op, false, false);
@@ -602,7 +602,7 @@ newOP("help", "Lists all Commands", function(args)
 end)
 
 newOP("exit", "Exits the program", function()
-  print("Goodbye :)");
+  write("Goodbye :)");
   sleep(1);
   term.clear();
   term.setCursorPos(1, 1);

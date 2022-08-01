@@ -168,8 +168,8 @@ local function InputThread()
         doLoop = false;
         term.clear();
         term.setCursorPos(1, 1);
-        if (blob.name) then print(blob.name);
-        else print("Does not have a name...") end
+        if (blob.name) then write(blob.name);
+        else write("Does not have a name...") end
         write("Press Any Key to Continue.");
         os.pullEvent("char");
         doLoop = true;
@@ -198,7 +198,7 @@ local function InputThread()
         term.setCursorPos(1, 1);
         for x, xTab in pairs(markers) do
           for y, marker in pairs(xTab) do
-            print(marker.name .. ", X: " .. gx + x * 16 .. ", Z: " .. gz + y * 16);
+            write(marker.name .. ", X: " .. gx + x * 16 .. ", Z: " .. gz + y * 16);
           end
         end
         write("Press Any Key to Continue.");

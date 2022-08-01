@@ -28,16 +28,16 @@ local doY = tobool(args[2], false);
 local doZ = tobool(args[3], true);
 
 local px, py, pz = gps.locate();
-if (not px) then print("Could not locate."); return end
+if (not px) then write("Could not locate."); return end
 local pvec = Vector3.new(px, py, pz);
-print("Position 1 has been set.");
+write("Position 1 has been set.");
 os.pullEvent("key");
 local cx, cy, cz = gps.locate();
-if (not cx) then print("Could not locate."); return end 
+if (not cx) then write("Could not locate."); return end 
 local cvec = Vector3.new(cx, cy, cz);
 local diff = 0;
 if (doX) then diff = diff + math.abs(pvec.x - cvec.x) end
 if (doY) then diff = diff + math.abs(pvec.y - cvec.y) end
 if (doZ) then diff = diff + math.abs(pvec.z - cvec.z) end
-print("Position 2 has been set.");
-print(diff);
+write("Position 2 has been set.");
+write(diff);

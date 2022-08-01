@@ -21,11 +21,11 @@ function Recipe.new(productName, out, materials)
 end
                  
 while true do
-  print("Waiting for Message...");
+  write("Waiting for Message...");
   local id, msg, filter = rednet.receive();
   if (not storageID) then storageID = id; end
   if (filter == "new") then
-    print("Registering new Recipe")
+    write("Registering new Recipe")
     local recipe = Recipe.new();
     for i = 1, 9 do
       local slot = craftToGlobal[i];
@@ -40,7 +40,7 @@ while true do
     rednet.send(storageID, recipe, "recipe");
   elseif (filter == "craft") then
     turtle.craft();
-    print("Crafted...");
+    write("Crafted...");
   elseif (filter == "list") then
     local list = {};
     for i = 1, 16 do 

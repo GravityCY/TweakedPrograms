@@ -48,7 +48,7 @@ end
 local function forward()
   tUtils.goDig(sides.up);
   local slot = getStairSlot();
-  if (not slot) then print("No Stairs Found."); error(); end
+  if (not slot) then write("No Stairs Found."); error(); end
   turtle.select(slot);
   tUtils.place(sides.down);
   tUtils.goDig(sides.forward);

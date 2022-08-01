@@ -59,9 +59,9 @@ end
 local function mprint(...)
   if (monitor) then
     term.redirect(monitor);
-    print(...);
+    write(...);
     term.redirect(computer);
-  else print(...) end
+  else write(...) end
 end
 
 local ops = {};
@@ -78,8 +78,8 @@ ops.add.fn = function(input)
     local file = fs.open("/data/todos.list", "a");
     file.write(todoName .. " " .. todoContent);
     file.close();
-    print("Succesfully added " .. todoName);
-  else print("Name Already Exists"); end
+    write("Succesfully added " .. todoName);
+  else write("Name Already Exists"); end
 end
 
 -- Remove Operator
@@ -91,8 +91,8 @@ ops.remove.fn = function(input)
   if (todos[todoName]) then 
     todos[todoName] = nil;
     save();
-    print("Successfully deleted " .. todoName .. ".");
-  else print("Todo does not exist..."); end
+    write("Successfully deleted " .. todoName .. ".");
+  else write("Todo does not exist..."); end
 end
 
 ops.edit = {};
@@ -104,8 +104,8 @@ ops.edit.fn = function(input)
     local todoContent = tabu.toString(input, 3, nil, " ") or requestInput("Enter Content: ");
     todos[todoName] = todoContent;
     save();
-    print("Succesfully edited " .. todoName .. ".");
-  else print("Todo does not exist..."); end
+    write("Succesfully edited " .. todoName .. ".");
+  else write("Todo does not exist..."); end
 end
 
 -- List Operator
@@ -118,11 +118,11 @@ ops.list.fn = function()
   monitor.setCursorPos(1, 1);
   for todoName, todoContent in pairs(todos) do
     local formatted = string.format("%s: %s.", todoName, todoContent);
-    print(formatted);
+    write(formatted);
     mprint(formatted);
     total = total + 1;
   end
-  if (total == 0) then print("No Todos... :("); mprint("No Todos... :("); end
+  if (total == 0) then write("No Todos... :("); mprint("No Todos... :("); end
 end
 
 -- Help Operator
@@ -138,7 +138,7 @@ ops.help.fn = function()
       end
       result = result .. "): " .. op.desc;
     else result = string.format("%s: %s.", opName, op.desc); end
-    print(result);
+    write(result);
   end
 end
 

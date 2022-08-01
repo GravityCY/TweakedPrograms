@@ -30,7 +30,7 @@ map();
 for id, item in pairs(items) do
   for addr, slots in pairs(item.inside) do
     for _, slot in ipairs(slots) do
-      print(id, addr, slot);
+      write(id, addr, slot);
     end
   end
 end

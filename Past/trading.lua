@@ -36,8 +36,8 @@ term.redirect(monitor);
 while true do
   term.clear();
   term.setCursorPos(1, 1);
-  print(sMsg);
-  if (status) then print(status); end
+  write(sMsg);
+  if (status) then write(status); end
   os.pullEvent("redstone"); 
   if (redstone.getInput("back")) then
     status = nil;

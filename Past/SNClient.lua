@@ -37,8 +37,8 @@ local function printHelp(command, doPrintExample, doPrintDescription)
   if (doPrintDescription == nil) then doPrintDescription = false; end
   local str = command.name;
   if (doPrintDescription) then str = str .. " - " .. command.description; end
-  print(str);
-  if (doPrintExample and command.example) then print(command.example); end
+  write(str);
+  if (doPrintExample and command.example) then write(command.example); end
 end
 
 local function newOP(name, desc, fn, example)
@@ -56,11 +56,11 @@ if (isDebug) then
     term.clear();
     term.setCursorPos(1, 1);
     if (args[2] == "inv") then
-      for i, v in ipairs(sn.getInventories()) do print(v); end
+      for i, v in ipairs(sn.getInventories()) do write(v); end
     elseif (args[2] == "import") then
-      for i, v in ipairs(importerAddrs) do print(v); end 
+      for i, v in ipairs(importerAddrs) do write(v); end 
     elseif (args[2] == "buffer") then
-      print(sn.getBuffer());
+      write(sn.getBuffer());
     end
   end)
 end
@@ -111,11 +111,11 @@ end);
 newOP("help", "Lists all Commands", function(args) 
   term.clear();
   term.setCursorPos(1, 1);
-  print("Commands: ");
+  write("Commands: ");
   if (args and args[2]) then
     local op = ops[args[2]];
     if (op) then printHelp(op, true, true);
-    else print("No such Command."); end
+    else write("No such Command."); end
   else
     for _, op in pairs(opsList) do
       printHelp(op, false, false);

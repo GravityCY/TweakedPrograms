@@ -6,7 +6,7 @@ local function mainThread()
         if (not runMainThread) then coroutine.yield(); end
         term.clear();
         term.setCursorPos(1, 1);
-        print(i);
+        write(i);
         i = i + 1;
         sleep(1);
     end

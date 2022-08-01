@@ -85,6 +85,6 @@ while true do
     if (y ~= sx) then corner(); end
   end
   home();
-  print("Sleeping for " .. sleepTime .. " seconds.");
+  write("Sleeping for " .. sleepTime .. " seconds.");
   sleep(sleepTime);
 end

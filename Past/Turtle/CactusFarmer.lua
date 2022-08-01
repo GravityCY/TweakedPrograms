@@ -63,9 +63,9 @@ local function main()
     end
     goHome();
     local eTime = os.clock();
-    print(string.format("Took %s seconds.", eTime - sTime));
-    print(string.format("Got %s Cacti", cactusGot));
-    print(string.format("Sleeping for %s seconds", sleepTime));
+    write(string.format("Took %s seconds.", eTime - sTime));
+    write(string.format("Got %s Cacti", cactusGot));
+    write(string.format("Sleeping for %s seconds", sleepTime));
     sleep(sleepTime);
   end
 end

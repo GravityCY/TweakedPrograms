@@ -93,7 +93,7 @@ local function smelt()
   for itemName, amount in pairs(uniques) do
     local sTime = os.clock();
     if (amount >= fuelRatio) then
-      print("Smelting " .. itemName .. " this may take a minute...");
+      write("Smelting " .. itemName .. " this may take a minute...");
       for _ = 1, amount / fuelRatio do
         for _, smeltery in ipairs(smelteries) do
           if (amount >= fuelRatio and fuelInv.pushAny(smeltery, 1, 2) == 1) then
@@ -103,9 +103,9 @@ local function smelt()
         end
       end
       extract();
-      print("Finished Smelting " .. itemName .. ".");
+      write("Finished Smelting " .. itemName .. ".");
       local eTime = os.clock();
-      print("Took " .. string.format("%0.2f", eTime - sTime ).. " seconds...");
+      write("Took " .. string.format("%0.2f", eTime - sTime ).. " seconds...");
       if (speaker) then speaker.playNote("harp", 1, 1); end
     end 
   end
@@ -115,7 +115,7 @@ load();
 setup();
 if (not hasData) then save(); end
 while true do
-  print("Waiting for Activation...");
+  write("Waiting for Activation...");
   os.pullEvent("redstone");
   if (redstone.getInput("top")) then smelt(); end
 end

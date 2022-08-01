@@ -22,7 +22,7 @@ end
 local function doUI()
   term.clear();
   term.setCursorPos(1, 1);
-  print("Mined: " .. mined);
+  write("Mined: " .. mined);
 end
 
 local function mainThread()

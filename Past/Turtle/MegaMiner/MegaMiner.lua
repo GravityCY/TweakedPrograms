@@ -78,7 +78,7 @@ local function respond(id, msg, protocol)
 end
 
 local function place()
-  print("Placing...");
+  write("Placing...");
   tUtils.goDig(sides.up);
   turtle.select(botSlot);
   tUtils.placeDig(sides.down);
@@ -103,7 +103,7 @@ local function place()
   turtle.select(botSlot);
   tUtils.dig(sides.down);
   if (robots > 1) then tUtils.turn(sides.left); end
-  print("Finished Placing...");
+  write("Finished Placing...");
   receiveSendDistance();
   sleep(0.5);
 end
@@ -117,15 +117,15 @@ local function goStart()
 end
 
 local function start()
-  print("Starting...");
+  write("Starting...");
   tUtils.blacklist["computercraft:turtle_normal"] = true;
   sendToAll(distance, "start");
   doRep(tUtils.goWait, distance, sides.forward);
-  print("Finished Mining...");
+  write("Finished Mining...");
 end
 
 local function dump()
-  print("Dumping...");
+  write("Dumping...");
   tUtils.goDig(sides.down);
   turtle.select(outSlot);
   tUtils.placeDig(sides.forward);
@@ -138,7 +138,7 @@ local function dump()
 end
 
 local function recover()
-  print("Recovering...");
+  write("Recovering...");
   tUtils.blacklist["computercraft:turtle_normal"] = nil;
   for i = 1, robots do
     while true do
@@ -155,7 +155,7 @@ local function recover()
   tUtils.dig(sides.down);
   turtle.select(outSlot);
   tUtils.dig(sides.forward);
-  print("Finished Recovery...");
+  write("Finished Recovery...");
 end
 
 local function main()

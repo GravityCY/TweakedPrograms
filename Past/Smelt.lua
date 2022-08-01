@@ -85,7 +85,7 @@ local function smelt()
   end
   extract();
   local eTime = os.clock();
-  print("Took " .. eTime - sTime .. " seconds...");
+  write("Took " .. eTime - sTime .. " seconds...");
   if (speaker) then 
     for i = 1, 3 do
       speaker.playNote("bell"); 

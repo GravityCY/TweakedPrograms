@@ -39,8 +39,8 @@ local function ui()
   while true do
     term.clear();
     term.setCursorPos(1, 1);
-    print("Status: " .. statusFormat[status]);
-    print("Fuel Level: " .. turtle.getFuelLevel());
+    write("Status: " .. statusFormat[status]);
+    write("Fuel Level: " .. turtle.getFuelLevel());
     sleep(1);
   end
 end

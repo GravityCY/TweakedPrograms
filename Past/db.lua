@@ -9,7 +9,7 @@ local function writeFile(path, content)
   file.close();
 end
 
-if (not dbcl) then print("Could Not Connect."); return end
+if (not dbcl) then write("Could Not Connect."); return end
 
 local function requestInput(req)
   write(req);
@@ -20,5 +20,5 @@ local fileName = args[1] or requestInput("Enter File Name: ");
 local localPath = args[2] or fileName:match("^.+/(.+)$") or fileName;
 
 local file = dbcl:getFile(fileName);
-if (not file.exists) then print("No such file");
+if (not file.exists) then write("No such file");
 else writeFile(localPath, file.content); end

@@ -96,10 +96,10 @@ local function main()
 
     local eTime = os.clock();
     local timeTook = eTime - sTime;
-    print("Took " .. timeTook .. " seconds.")
-    print("Got " .. harvested .. " crops.")
-    print("That's " .. string.format("%.2f", harvested / timeTook) .. " crops a second.")
-    print("Sleeping for " .. sleepTime .. " seconds");
+    write("Took " .. timeTook .. " seconds.")
+    write("Got " .. harvested .. " crops.")
+    write("That's " .. string.format("%.2f", harvested / timeTook) .. " crops a second.")
+    write("Sleeping for " .. sleepTime .. " seconds");
     sleep(sleepTime);
   end
 end

@@ -43,7 +43,7 @@ local function setupPlacement()
 end
 
 local function gotoPlacement()
-  print("Going to Placement...");
+  write("Going to Placement...");
   if (place == 1) then
     tUtils.goDig(sides.forward);
     tUtils.goDig(sides.down);
@@ -67,14 +67,14 @@ end
 
 local function startMining()
   receiveFrom(megaID, "start");
-  print("Started Mining...");
+  write("Started Mining...");
   doRep(move, distance);
   rednet.send(megaID, nil, "mined");
 end
 
 local function dumpItems()
   receiveFrom(megaID, "dump");
-  print("Dumping Items...");
+  write("Dumping Items...");
   tUtils.turn(sides.left);
   doRep(tUtils.goDig, place - 1, sides.forward);
   tUtils.turn(sides.left);
@@ -91,7 +91,7 @@ local function main()
   setupDistance();
   startMining();
   dumpItems();
-  print("Finished...");
+  write("Finished...");
 end
 
 main();

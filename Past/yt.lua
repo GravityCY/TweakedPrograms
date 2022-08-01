@@ -13,7 +13,7 @@ local video = yt.getLatestVideo(channelId);
 local comments = yt.getComments(video.id);
 local str = "Comments";
 local cop = ("-"):rep(mx / 2 - #str / 2);
-print(cop .. str .. cop);
+write(cop .. str .. cop);
 for i, comment in ipairs(comments) do
-  print(comment.userName ..": " .. comment.textContent);
+  write(comment.userName ..": " .. comment.textContent);
 end

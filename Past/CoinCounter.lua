@@ -10,7 +10,7 @@ local mon = peripheral.find("monitor");
 local out = {};
 
 if (not storage) then
-  print("Please connect to storage controller via modems");
+  write("Please connect to storage controller via modems");
   error();
 end
 
@@ -51,13 +51,13 @@ while true do
     local value = conversions[coin].gold * amount;
     totalGold = totalGold + value;
   end
-  print(strFormat("Total Value of all Silver: %s", totalSilver));
-  print(strFormat("Total Value of all Gold: %s", totalGold));
+  write(strFormat("Total Value of all Silver: %s", totalSilver));
+  write(strFormat("Total Value of all Gold: %s", totalGold));
   for coin, amount in pairs(coins) do
     local value = conversions[coin].silver * amount;
     local nameFormatted = nameFormat(coin);
     local strFormatted = strFormat("%s %s (%s)", amount, nameFormatted, value);
-    print(strFormatted)
+    write(strFormatted)
   end
   sleep(sleepTime);
 end

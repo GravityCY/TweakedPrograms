@@ -50,7 +50,7 @@ local function smelt()
   local fuelCount = uniques[fuelName];
   for itemName, amount in pairs(uniques) do
     if (itemName ~= fuelName) then
-      print("Smelting " .. itemName .. " this may take a minute...");
+      write("Smelting " .. itemName .. " this may take a minute...");
       for i = 1, math.floor(amount / fuelRatio) do
         local index = totalSmelteries;
         if (i % totalSmelteries ~= 0) then index = i % totalSmelteries; end
@@ -63,11 +63,11 @@ local function smelt()
         else break end
       end
       extract();
-      print("Finished Smelting " .. itemName .. ".");
+      write("Finished Smelting " .. itemName .. ".");
     end
   end
   local eTime = os.clock();
-  print("Took " .. eTime - sTime .. " seconds...");
+  write("Took " .. eTime - sTime .. " seconds...");
   if (speaker) then 
     for i = 1, 3 do
       speaker.playNote("bell"); 

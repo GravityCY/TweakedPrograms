@@ -66,7 +66,7 @@ local function goHome()
 end
 
 local function collectItems()
-  print(string.format("Waiting for items to smelt (%ss)", itemPerFurnace * smeltTime));
+  write(string.format("Waiting for items to smelt (%ss)", itemPerFurnace * smeltTime));
   sleep(itemPerFurnace * smeltTime);
   turtle.forward();
   turtle.suckUp();

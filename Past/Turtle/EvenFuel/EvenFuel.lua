@@ -88,7 +88,7 @@ local function main()
   tu.selectID("computercraft:disk")
   tu.drop(nil, 1, sides.up);
   local fuelLevels = getFuelLevels();
-  print(fuelLevels.highest);
+  write(fuelLevels.highest);
   fs.delete(mpath .. "/startup.lua");
   -- fs.copy(useFuel, mpath .. "/startup.lua");
   -- local needs = getCalculateFuel(fuelLevels);

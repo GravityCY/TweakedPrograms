@@ -30,4 +30,4 @@ local function getInput()
   return args;
 end
 
-for k,v in pairs(getInput()) do print(k,v ) end
+for k,v in pairs(getInput()) do write(k,v ) end

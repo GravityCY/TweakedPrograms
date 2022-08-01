@@ -8,4 +8,4 @@ local function toBinary(num)
   return binStr
 end
 
-print(toBinary(7));
+write(toBinary(7));

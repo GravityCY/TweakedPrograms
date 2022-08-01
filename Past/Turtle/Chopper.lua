@@ -106,8 +106,8 @@ local function main()
     end
     goHome();
     local eTime = os.clock();
-    print("Took " .. eTime - sTime .. " seconds.");
-    print("Got " .. logsHarvested .. " logs.");
+    write("Took " .. eTime - sTime .. " seconds.");
+    write("Got " .. logsHarvested .. " logs.");
     sleep(sleepTime);
   end
 end

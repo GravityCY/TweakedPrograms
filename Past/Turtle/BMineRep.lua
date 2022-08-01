@@ -39,5 +39,5 @@ for i = 1, y do
   end
 end
 
-print("Finished");
+write("Finished");
 error();

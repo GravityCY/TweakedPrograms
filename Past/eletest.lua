@@ -42,12 +42,12 @@ local function goFloor(current, destination)
   local goingDown = false;
   local enabled = false;
   local diff = current - destination;
-  if (diff == 0) then print("That's the Current Floor") return end
+  if (diff == 0) then write("That's the Current Floor") return end
   goingDown = setDown(diff >= 1);
   enabled = setEnabled(true);
 
-  print("Current Floor: #" .. current);
-  print("Going to Floor #" .. destination);
+  write("Current Floor: #" .. current);
+  write("Going to Floor #" .. destination);
 
   local count = 0;
   onRedstoneChanged("top");
@@ -65,8 +65,8 @@ local function goFloor(current, destination)
   local endTime = os.clock();
   enabled = setEnabled(false);
   goingDown = setDown(false);
-  print("Arrived");
-  print("Took " .. string.format("%.2f", endTime - startTime) .. " seconds.");
+  write("Arrived");
+  write("Took " .. string.format("%.2f", endTime - startTime) .. " seconds.");
 end
 
 

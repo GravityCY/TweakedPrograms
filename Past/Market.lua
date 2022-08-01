@@ -36,12 +36,12 @@ local function onHelp(args)
   if (args and #args > 0) then
     local op = args[1];
     local cmd = command.get(op);
-    if (cmd) then print(cmd.id .. " - " .. cmd.description);
-    else print("No Such Command.."); end
+    if (cmd) then write(cmd.id .. " - " .. cmd.description);
+    else write("No Such Command.."); end
   else
     for _, cmd in ipairs(command.list()) do
       if (cmd.id ~= "help") then
-        print(cmd.id .. " - " .. cmd.description);
+        write(cmd.id .. " - " .. cmd.description);
       end
     end
   end
@@ -54,8 +54,8 @@ local function onRegister(args)
     if (not product) then
       term.clear();
       term.setCursorPos(1, 1);
-      print("Add an Item to the Inventory under the Computer then Continue...");
-      print("Press Enter To Continue.");
+      write("Add an Item to the Inventory under the Computer then Continue...");
+      write("Press Enter To Continue.");
       ku.pullKey(keys.enter);
       product = buffer.get(1);
       else break end
@@ -66,8 +66,8 @@ local function onRegister(args)
     if (not cost) then
       term.clear();
       term.setCursorPos(1, 1);
-      print("Add an Item to the Inventory under the Computer then Continue...");
-      print("Press Enter To Continue.");
+      write("Add an Item to the Inventory under the Computer then Continue...");
+      write("Press Enter To Continue.");
       ku.pullKey(keys.enter);
       cost = buffer.get(1);
       else break end

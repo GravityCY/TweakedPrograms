@@ -18,9 +18,9 @@ local craftTurtleAddr = peripheral.getName(craftTurtle);
 
 function craftTurtle.list()
   rednet.send(craftTurtleID, nil, "list");
-  print("Waiting for listing");
+  write("Waiting for listing");
   local _, list = rednet.receive("list");
-  print("Got Listing.");
+  write("Got Listing.");
   return list;
 end
 
@@ -297,7 +297,7 @@ local function printFilter(input)
     if (displayName:lower():find(filter)) then counted[displayName] = (counted[displayName] or 0) + item.count end
   end
   for item, count in pairs(counted) do
-    print(string.format("%s %s, %.2f stacks.", count, item, count / 64)); 
+    write(string.format("%s %s, %.2f stacks.", count, item, count / 64)); 
   end
 end
 
@@ -369,7 +369,7 @@ local function saveInventories()
 end
 
 local function loadInventories()
-  print("Loading Inventories.");
+  write("Loading Inventories.");
   local file = fs.open(invPath, "r");
   if (not file) then return end
   bufferAddr = file.readLine();
@@ -461,8 +461,8 @@ local function printHelp(command, doPrintExample, doPrintDescription)
   if (doPrintDescription == nil) then doPrintDescription = false; end
   local str = command.name;
   if (doPrintDescription) then str = str .. " - " .. command.description; end
-  print(str);
-  if (doPrintExample and command.example) then print(command.example); end
+  write(str);
+  if (doPrintExample and command.example) then write(command.example); end
 end
 
 local function newOP(name, desc, fn, example)
@@ -480,18 +480,18 @@ if (isDebug) then
     term.clear();
     term.setCursorPos(1, 1);
     if (args[2] == "inv") then
-      for i, v in ipairs(inventoryAddrs) do print(v); end
+      for i, v in ipairs(inventoryAddrs) do write(v); end
     elseif (args[2] == "import") then
-      for i, v in ipairs(importerAddrs) do print(v); end 
+      for i, v in ipairs(importerAddrs) do write(v); end 
     elseif (args[2] == "buffer") then
-      print(bufferAddr);
+      write(bufferAddr);
     end
   end)
 end
 
 newOP("craft", "Crafts Items using the Crafty Turtle Connected to the Network", function(args)
   local op = args[2];
-  if (not op) then return print("Enter an ID, or register a new Recipe with 'new', or list all existing recipes with 'list'"); end
+  if (not op) then return write("Enter an ID, or register a new Recipe with 'new', or list all existing recipes with 'list'"); end
   if (op == "new") then
     term.clear();
     term.setCursorPos(1, 1);
@@ -499,12 +499,12 @@ newOP("craft", "Crafts Items using the Crafty Turtle Connected to the Network", 
     rednet.send(craftTurtleID, nil, "new");
     local id, recipe = rednet.receive("recipe");
     saveRecipe(recipe);
-    print("Success!");
+    write("Success!");
   elseif (op == "list") then
     term.clear();
     term.setCursorPos(1, 1);
     if (fs.exists(recipePath)) then
-      for _, path in pairs(fs.list(recipePath)) do print(pathToID(path)); end
+      for _, path in pairs(fs.list(recipePath)) do write(pathToID(path)); end
     end
   else
     local count = args[3];
@@ -513,7 +513,7 @@ newOP("craft", "Crafts Items using the Crafty Turtle Connected to the Network", 
     term.setCursorPos(1, 1);
     local recipe = loadRecipe(op);
     if (recipe) then
-      print("Crafting " .. count .. " " .. recipe.product .. "...");
+      write("Crafting " .. count .. " " .. recipe.product .. "...");
       pullAll(buffer);
       for matName, matData in pairs(recipe.materials) do
           push(buffer, matName, matData.count * count);
@@ -525,8 +525,8 @@ newOP("craft", "Crafts Items using the Crafty Turtle Connected to the Network", 
       rednet.send(craftTurtleID, nil, "craft");
       sleep(0.5);
       pullAll(craftTurtle);
-      print("Succesfully crafted " .. count .. " " .. recipe.product .. ".");
-    else return print("Enter an ID, or register a new Recipe with 'new', or list all existing recipes with 'list'"); end
+      write("Succesfully crafted " .. count .. " " .. recipe.product .. ".");
+    else return write("Enter an ID, or register a new Recipe with 'new', or list all existing recipes with 'list'"); end
   end
 end, "craft 'minecraft:cobblestone' to Craft a Registered Recipe by that id.\ncraft new - Registers a new Recipe.\ncraft list - Lists all Registered Recipes.")
 
@@ -538,11 +538,11 @@ newOP("buffer", "Sets detection mode to Buffer, any inventory you add, will be m
     -- requestInput("Enter an ID for the importer: ");
     bufferAddr = addr;
     buffer = iu.wrap(peripheral.wrap(addr));
-    print("Succesfully added " .. addr);
+    write("Succesfully added " .. addr);
   else
     bufferAddr = nil;
     buffer = nil;
-    print("Succesfully removed " .. addr);
+    write("Succesfully removed " .. addr);
   end
   saveInventories();
 end)
@@ -556,11 +556,11 @@ newOP("storage", "Sets detection mode to Storage, any inventory you add, will be
         table.insert(inventoryAddrs, addr);
         table.insert(inventories, inventory);
         table.insert(inventorySizes, inventory.size());
-        print("Succesfully added " .. addr);
+        write("Succesfully added " .. addr);
       else 
         inventoryAddrs = tabu.remove(inventoryAddrs, function(value) return value == addr end);
         mapInventories();
-        print("Succesfully removed " .. addr);
+        write("Succesfully removed " .. addr);
       end
       if (speaker) then speaker.playNote("harp", 1, 1); end
     else break end
@@ -575,11 +575,11 @@ newOP("import", "Imports Items into the network from a specific address", functi
   if (wasAdded) then
     table.insert(importerAddrs, addr);
     table.insert(importerList, peripheral.wrap(addr));
-    print("Succesfully added " .. addr);
+    write("Succesfully added " .. addr);
   else
     importerAddrs = tabu.remove(importerAddrs, function(value) return value == addr end);
     mapInventories();
-    print("Succesfully removed " .. addr);
+    write("Succesfully removed " .. addr);
   end
   saveInventories();
 end)
@@ -614,9 +614,9 @@ newOP("compact", "Compacts Items (Inefficiently)", function(args)
       local str1 = strf("Slot: %s / %s", slot, inventory.size());
       term.clear();
       term.setCursorPos(tmx/2-#str/2, tmy/2);
-      print(str);
+      write(str);
       term.setCursorPos(tmx/2-#str1/2, tmy/2+1);
-      print(str1);
+      write(str1);
     end
   end
   term.clear();
@@ -626,16 +626,16 @@ end)
 
 newOP("sort", "Sorts all Items alphabetically (Using Their IDS)", function() 
   pullAll(buffer);
-  print("Sorting...");
+  write("Sorting...");
   sort(function (slot)
     local str = strf("Slot: %s / %s", slot, netSize);
     term.clear();
     term.setCursorPos(tmx/2-#str/2, tmy/2);
-    print(str);
+    write(str);
   end);
   term.clear();
   term.setCursorPos(1, 1);
-  print("Sorted."); 
+  write("Sorted."); 
   if (speaker) then doRepeat(function() speaker.playNote("harp", 1, 1); sleep(1); end, 3); end
 end);
 
@@ -650,7 +650,7 @@ newOP("full", "Displays how full the Storage Network is", function()
     term.clear();
     local str = strf("%d%% full.", occupied / tsize * 100);
     term.setCursorPos(tmx / 2 - #str / 2, tmy / 2);
-    print(str);
+    write(str);
     os.pullEvent("char");
     term.clear();
     term.setCursorPos(1, 1);
@@ -664,10 +664,10 @@ newOP("get", "Gets an Item using it's ID and puts it into the buffer chest", fun
   local ids = getSimilar(filter, list());
   local names = {};
   for i = 1, #ids do names[i] = iu.format(ids[i]); end
-  if (#ids == 0) then print("No Item Found");
+  if (#ids == 0) then write("No Item Found");
   else
     local selection = tu.select({selections=names, prefix="-> "});
-    if (selection == nil) then print("Canceled..."); return end
+    if (selection == nil) then write("Canceled..."); return end
     local itemName = ids[selection];
     if (amount == "all") then
       amount = push(buffer, itemName, buffer.size()*64);
@@ -675,7 +675,7 @@ newOP("get", "Gets an Item using it's ID and puts it into the buffer chest", fun
       amount = tonumber(amount);
       push(buffer, itemName, amount);
     end
-    print(strf("Pushed %s %s.", amount, itemName))
+    write(strf("Pushed %s %s.", amount, itemName))
   end  
 end);
 
@@ -687,14 +687,14 @@ newOP("put", "Puts an Item from the buffer chest in the system", function(args)
   if (not amount) then amount = requestInput("Enter Amount: "); end
   local similar = getSimilar(filter, buffer.list());
   if (#similar == 0) then
-    print("No Item Found")
+    write("No Item Found")
   else
     local selection = tu.select({selections=similar, prefix="-> "});
     if (selection) then
       pull(buffer, similar[selection], amount);
-      print("Success.");
+      write("Success.");
     else
-      print("Canceled...");
+      write("Canceled...");
     end
   end
 end);
@@ -702,11 +702,11 @@ end);
 newOP("help", "Lists all Commands", function(args) 
   term.clear();
   term.setCursorPos(1, 1);
-  print("Commands: ");
+  write("Commands: ");
   if (args and args[2]) then
     local op = ops[args[2]];
     if (op) then printHelp(op, true, true);
-    else print("No such Command."); end
+    else write("No such Command."); end
   else
     for _, op in pairs(opsList) do
       printHelp(op, false, false);
@@ -715,7 +715,7 @@ newOP("help", "Lists all Commands", function(args)
 end)
 
 newOP("exit", "Exits the program", function()
-  print("Goodbye :)");
+  write("Goodbye :)");
   sleep(1);
   term.clear();
   term.setCursorPos(1, 1);

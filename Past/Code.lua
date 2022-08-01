@@ -9,7 +9,7 @@ local function onSave(message)
     local file = fs.open(fileName, "w");
     file.write(content);
     file.close();
-    print("Writing file, " .. fileName);
+    write("Writing file, " .. fileName);
 end
 
 local function onSync(message)
@@ -19,7 +19,7 @@ local function onSync(message)
     if (file) then content = file.readAll(); end
     ws.send(content);
     file.close();
-    print("Syncing file, " .. fileName);
+    write("Syncing file, " .. fileName);
 end
 
 local ops = {sync=onSync, save=onSave};
@@ -32,16 +32,16 @@ end
 while true do
   ws = http.websocket("ws://"..ip..":"..port);
   if (ws) then
-    print("Connected.");
+    write("Connected.");
     sleep(0.5);
     ws.send(id);
     while true do
-      print("Waiting For Message...");
+      write("Waiting For Message...");
       local message = ws.receive();
       onMessage(message);
     end
   else 
-    print("Disconnected...");
+    write("Disconnected...");
     sleep(1); 
   end
 end
