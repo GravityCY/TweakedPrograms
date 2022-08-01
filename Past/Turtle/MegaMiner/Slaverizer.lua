@@ -1,0 +1,1 @@
+shell.run("Setup.lua", "startup=SlaveMiner.lua", "\"label=Slave 0.4\"");

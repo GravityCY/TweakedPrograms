@@ -1,0 +1,9 @@
+{
+  "Lua.diagnostics.globals": [
+    "turtle",
+    "read",
+    "term",
+    "sleep",
+    "parallel"
+  ]
+}

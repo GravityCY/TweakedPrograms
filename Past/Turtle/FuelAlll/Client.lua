@@ -1,0 +1,1 @@
+os.setComputerLabel(tostring(turtle.getFuelLevel()));
