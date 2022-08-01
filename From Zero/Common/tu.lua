@@ -15,7 +15,8 @@ local function getInput(varType, message)
   local input = ""
   while true do
     input = requestInput(message);
-    if ((input ~= "" or input ~= " ") and type(input) == varType) then break end
+    if (varType == varTypes.number) then input = tonumber(input); end
+    if (input ~= nil and (input ~= "" or input ~= " ")) then break end
   end
   return input;
 end
