@@ -1,9 +1,0 @@
-{
-  "Lua.diagnostics.globals": [
-    "peripheral"
-  ],
-  "Lua.diagnostics.disable": [
-    "undefined-global",
-    "undefined-field"
-  ]
-}
