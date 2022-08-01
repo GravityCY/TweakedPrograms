@@ -3,10 +3,9 @@ local tu = require("tu");
 
 local isForward = true;
 
-local mx, my, mz;
+local mx, mz;
 
 mx = tu.getInput(true, tu.types.number, "Enter Forward: ");
-my = tu.getInput(true, tu.types.number, "Enter Up: ");
 mz = tu.getInput(true, tu.types.number, "Enter Right: ");
 
 local function right()
@@ -14,29 +13,20 @@ local function right()
   else turtle.turnLeft(); end
 end
 
-for y = 1, my do
+for z = 1, mz do
   for x = 1, mx do
-    for z = 1, mz do
-      turtle.dig();
-      turtle.forward();
-      turtle.digUp();
-      turtle.digDown();
-    end
-    if (x ~= mx) then
-      right();
-      turtle.dig();
-      turtle.forward(); 
-      turtle.digUp();
-      turtle.digDown();
-      right();
-      isForward = not isForward;
-    end
+    turtle.dig();
+    turtle.forward();
+    turtle.digUp();
+    turtle.digDown();
   end
-  if (y ~= my) then
+  if (z ~= mz) then
+    right();
+    turtle.dig();
+    turtle.forward(); 
     turtle.digUp();
-    turtle.up();
-    turtle.digUp();
-    turtle.turnRight();
-    turtle.turnRight();
+    turtle.digDown();
+    right();
+    isForward = not isForward;
   end
 end
