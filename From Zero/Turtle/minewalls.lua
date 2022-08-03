@@ -8,11 +8,17 @@ local function doRep(fn, times, ...)
   for i = 1,times do fn(...); end
 end
 
-doRep(bt.goDig, sx, sides.forward);
+local function forward()
+  bt.goDig(sides.forward);
+  bt.dig(sides.up);
+  bt.dig(sides.down);
+end
+
+doRep(forward, sx);
 bt.turn(sides.right);
-doRep(bt.goDig, sz, sides.forward);
+doRep(forward, sz);
 bt.turn(sides.right);
-doRep(bt.goDig, sx, sides.forward);
+doRep(forward, sx);
 bt.turn(sides.right);
-doRep(bt.goDig, sz, sides.forward);
+doRep(forward, sz);
 bt.turn(sides.right);
