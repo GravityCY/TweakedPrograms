@@ -15,12 +15,11 @@ function t.range(tab, from, to)
   return temp;
 end
 
-function t.toString(tab, from, to, seperator)
-  from = from or 1;
-  to = to or #tab;
-  local str = tab[from];
-  for i = from + 1, to do
-    str = str .. " " .. tab[i];
+function t.toString(tab, seperator)
+  local str = tab[1];
+  seperator = seperator or " "
+  for i = 2, #tab do
+    str = str .. seperator .. tab[i];
   end
   return str;
 end
