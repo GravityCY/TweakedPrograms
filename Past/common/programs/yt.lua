@@ -1,5 +1,4 @@
 local yt = require("ytapi");
-local apiKey = "AIzaSyCfyNQO7S9r0zWSdXfWc-CaEJ7NsK9rchc";
 yt.register(apiKey);
 
 local mx, my = term.getSize();
