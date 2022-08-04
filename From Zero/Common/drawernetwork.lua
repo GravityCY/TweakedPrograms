@@ -24,7 +24,7 @@ commands["list"] = function(args)
   local itemName = args[1] .. " " .. args[2];
   for countName, countNumber in pairs(count()) do
     if (countName:find(itemName)) then
-      print(f("%s %s", countNumber, countName));
+      print(f("%s %s", countNumber, itemutils.format(countName)));
     end
   end
 end

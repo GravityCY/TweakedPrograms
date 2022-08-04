@@ -9,16 +9,6 @@ function t.toString(tab, seperator)
   return str;
 end
 
-function t.toTable(str, sep)
-  sep = sep or " ";
-
-  local tab = {};
-  for substr in str:gmatch(string.format("[^%s]+", sep)) do
-    tab[#tab+1] = substr;
-  end
-  return tab;
-end
-
 function t.splice(tab, from, to)
   local newTab = {};
   from = from or 1;
