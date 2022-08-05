@@ -7,6 +7,7 @@ function t.saveDownload(url, savePath)
   local saveFile = fs.open(savePath, "w");
   saveFile.write(data);
   saveFile.close();
+  resfile.close();
   return true;
 end
 
