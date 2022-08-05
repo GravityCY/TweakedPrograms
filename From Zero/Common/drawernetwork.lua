@@ -56,6 +56,8 @@ commands["put"] = function(args)
   if (type == "all") then putAll(); end
 end
 
+-- test
+
 while true do
   term.clear();
   term.setCursorPos(1, 1);
