@@ -53,9 +53,7 @@ end
 commands["put"] = function(args)
   if (args[1] == nil) then return end
   local type = args[1];
-  if (type == "all") then
-    
-  end
+  if (type == "all") then putAll(); end
 end
 
 while true do
