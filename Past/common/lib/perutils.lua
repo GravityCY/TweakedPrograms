@@ -34,7 +34,7 @@ end
 
 local function getNames()
   local names = peripheral.getNames()
-  if (p.doSort) then table.sort(names, function(a, b) return a < b end); end
+  if (p.doSort) then tableutils.sort(names, function(a, b) return a < b end); end
   return names;
 end
 
@@ -107,7 +107,7 @@ function p.getCustom(fn, asPeriph)
   local t = {};
   for _, ap in ipairs(p.getAll(asPeriph)) do
     local pp = toPeripheral(ap);
-    if (fn(pp)) then table.insert(t, ap); end
+    if (fn(pp)) then tableutils.insert(t, ap); end
   end
   return t;
 end

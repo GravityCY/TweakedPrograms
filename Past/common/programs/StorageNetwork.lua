@@ -82,7 +82,7 @@ local function getInput()
     end
     i = i + 1;
     if (str == "") then break end
-    table.insert(args, str);
+    tableutils.insert(args, str);
   end
   return args;
 end
@@ -431,7 +431,7 @@ local function detect(list)
     if (addr ~= nil) then 
       if (wasAdded) then 
         pmap[addr] = true;
-        table.insert(list, addr);
+        tableutils.insert(list, addr);
       else 
         pmap[addr] = nil;
         list = tabu.remove(list, function(value) return value == addr end)
@@ -553,9 +553,9 @@ newOP("storage", "Sets detection mode to Storage, any inventory you add, will be
     if (addr ~= nil) then 
       if (wasAdded) then 
         local inventory = peripheral.wrap(addr);
-        table.insert(inventoryAddrs, addr);
-        table.insert(inventories, inventory);
-        table.insert(inventorySizes, inventory.size());
+        tableutils.insert(inventoryAddrs, addr);
+        tableutils.insert(inventories, inventory);
+        tableutils.insert(inventorySizes, inventory.size());
         write("Succesfully added " .. addr);
       else 
         inventoryAddrs = tabu.remove(inventoryAddrs, function(value) return value == addr end);
@@ -573,8 +573,8 @@ newOP("import", "Imports Items into the network from a specific address", functi
   speaker.playNote("harp", 1, 1);
   if (addr == nil) then return end
   if (wasAdded) then
-    table.insert(importerAddrs, addr);
-    table.insert(importerList, peripheral.wrap(addr));
+    tableutils.insert(importerAddrs, addr);
+    tableutils.insert(importerList, peripheral.wrap(addr));
     write("Succesfully added " .. addr);
   else
     importerAddrs = tabu.remove(importerAddrs, function(value) return value == addr end);
@@ -594,8 +594,8 @@ newOP("export", "Exports an Item into an Inventory", function()
     item.name = requestInput("Enter an Item Name to export: ");
     item.count = tonumber(requestInput("Enter how much to export: "));
     periph.exportItem = item;
-    table.insert(exporterAddrs, addr);
-    table.insert(exporterList, periph);
+    tableutils.insert(exporterAddrs, addr);
+    tableutils.insert(exporterList, periph);
   else
     exporterAddrs = tabu.remove(exporterAddrs, function(value) return value == addr end);
   end

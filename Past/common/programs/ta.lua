@@ -25,7 +25,7 @@ local function getInput()
     end
     i = i + 1;
     if (str == "") then break end
-    table.insert(args, str);
+    tableutils.insert(args, str);
   end
   return args;
 end

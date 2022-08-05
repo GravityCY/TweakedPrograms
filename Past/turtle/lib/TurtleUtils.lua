@@ -201,8 +201,8 @@ function t.suck(side, getSlot)
       local new = t.list();
       slot = diff(prev, new);
     else props = {fn()}; end
-    if (props[1]) then return table.unpack(props), slot;
-    else return table.unpack(props); end
+    if (props[1]) then return tableutils.unpack(props), slot;
+    else return tableutils.unpack(props); end
   end
 end
 
@@ -262,8 +262,8 @@ function t.dig(side, getSlot)
       local new = t.list();
       slot = diff(prev, new);
     else props = {fn()}; end
-    if (props[1]) then return table.unpack(props), slot
-    else return table.unpack(props); end
+    if (props[1]) then return tableutils.unpack(props), slot
+    else return tableutils.unpack(props); end
   end
 end
 

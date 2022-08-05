@@ -113,7 +113,7 @@ function sn.getWhere(items)
             result[name].found = 0;
           end
           result[name].found = result[name].found + found;
-          table.insert(result[name].slots, { count=found, slot=toGlobalSlot(slot, index) });
+          tableutils.insert(result[name].slots, { count=found, slot=toGlobalSlot(slot, index) });
         end
         if (need == 0) then break end
       end
@@ -166,10 +166,10 @@ function sn.remove(addr)
   if (index == nil) then return end
   sn.capacity = sn.capacity - inventorySizes[index];
   local from, to = inventorySlot[index], inventorySlot[index] + inventorySizes[index];
-  table.remove(inventoryAddrs, index);
-  table.remove(inventoryList, index);
-  table.remove(inventorySlot, index);
-  table.remove(inventorySizes, index);
+  tableutils.remove(inventoryAddrs, index);
+  tableutils.remove(inventoryList, index);
+  tableutils.remove(inventorySlot, index);
+  tableutils.remove(inventorySizes, index);
 end
 
 function sn.pushSlot(toAddr, fromSlot, count, toSlot)

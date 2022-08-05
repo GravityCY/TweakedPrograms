@@ -20,7 +20,7 @@ end
 local function mapColors()
   for k,v in pairs(colors) do
     if (type(v) == "number") then
-      table.insert(lColors, v);
+      tableutils.insert(lColors, v);
     end
   end
   size = #lColors;

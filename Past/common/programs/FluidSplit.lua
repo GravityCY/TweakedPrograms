@@ -18,8 +18,8 @@ local nuggetTables = {};
 
 for index, perph in pairs(outputPerphs) do
   local name = perph.getItemDetail(1).name;
-  if (name == ingotCastName) then table.insert(ingotTables, perph); end
-  if (name == nuggetCastName) then table.insert(nuggetTables, perph); end
+  if (name == ingotCastName) then tableutils.insert(ingotTables, perph); end
+  if (name == nuggetCastName) then tableutils.insert(nuggetTables, perph); end
 end
 
 while true do

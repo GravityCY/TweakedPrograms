@@ -56,5 +56,5 @@ end
 while true do
   local runs = {rsThread};
   if (runMainThread) then runs[#runs+1] = mainThread; end
-  parallel.waitForAny(table.unpack(runs));
+  parallel.waitForAny(tableutils.unpack(runs));
 end

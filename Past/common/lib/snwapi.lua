@@ -104,7 +104,7 @@ local function toTable(input)
     end
     i = i + 1;
     if (str == "") then break end
-    table.insert(args, str);
+    tableutils.insert(args, str);
   end
   return args;
 end
@@ -215,7 +215,7 @@ local function loadList(path)
   while true do
     local line = f.readLine();
     if (line == nil) then break end
-    table.insert(list, line);
+    tableutils.insert(list, line);
   end
   f.close();
   return list;
@@ -279,8 +279,8 @@ local function getInput()
     term.setCursorBlink(true); 
     input = read(nil, history);
     if (input ~= "" and input ~= history[#history]) then
-      if (#history == 10) then table.remove(history, 1); end
-      table.insert(history, input);
+      if (#history == 10) then tableutils.remove(history, 1); end
+      tableutils.insert(history, input);
     end
   end
   local function getGlobalInput()
@@ -460,8 +460,8 @@ newOP("import", "Imports Items into the network from a specific address", functi
   if (addr == nil) then return end
   if (wasAdded) then
     local periph = peripheral.wrap(addr);
-    table.insert(importerAddrs, addr);
-    table.insert(importerList, periph);
+    tableutils.insert(importerAddrs, addr);
+    tableutils.insert(importerList, periph);
     write("Succesfully added " .. addr);
   else
     importerAddrs = tabu.remove(importerAddrs, function(value) return value == addr end);
@@ -481,8 +481,8 @@ newOP("export", "Exports an Item into an Inventory", function()
     item.name = requestInput("Enter an Item Name to export: ");
     item.count = tonumber(requestInput("Enter how much to export: "));
     periph.exportItem = item;
-    table.insert(exporterAddrs, addr);
-    table.insert(exporterList, periph);
+    tableutils.insert(exporterAddrs, addr);
+    tableutils.insert(exporterList, periph);
     write("Succesfully added " .. addr);
   else
     exporterAddrs = tabu.remove(exporterAddrs, function(value) return value == addr end);

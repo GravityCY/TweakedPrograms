@@ -28,7 +28,7 @@ end
 local function getInput()
   local input = read();
   local inTable = {};
-  for string in input:gmatch("%S+") do table.insert(inTable, string); end
+  for string in input:gmatch("%S+") do tableutils.insert(inTable, string); end
   return inTable;
 end
 

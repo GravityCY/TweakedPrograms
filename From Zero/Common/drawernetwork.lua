@@ -33,8 +33,8 @@ while true do
   term.clear();
   term.setCursorPos(1, 1);
   write("Command: ");
-  local input = tabu.toTable(read(), " ");
+  local input = tableutils.toTable(read(), " ");
   local command = input[1];
   local f = commands[command];
-  if (f ~= nil) then f(tabu.splice(input, 2)); end
+  if (f ~= nil) then f(tableutils.splice(input, 2)); end
 end

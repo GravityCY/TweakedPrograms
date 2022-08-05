@@ -1,7 +1,7 @@
 local t = {};
 
 function t.cat(tab1, tab2)
-  for i, v in ipairs(tab2) do table.insert(tab1, v); end
+  for i, v in ipairs(tab2) do tableutils.insert(tab1, v); end
 end
 
 function t.range(tab, from, to)

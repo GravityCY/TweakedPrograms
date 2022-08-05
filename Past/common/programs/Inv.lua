@@ -18,7 +18,7 @@ local function map()
     for slot, item in pairs(inventory.list()) do
       local tItem = prep(items, item.name, { inside = {} });
       local inv = prep(tItem.inside, addr, {});
-      table.insert(inv, slot);
+      tableutils.insert(inv, slot);
     end
   end
 end
