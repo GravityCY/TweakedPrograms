@@ -21,6 +21,8 @@ end
 
 local commands = {};
 commands["list"] = function(args)
+  if (args[1] == nil) then return end
+  if (args[2] == nil) then return end
   local itemName = args[1] .. " " .. args[2];
   for countName, countNumber in pairs(count()) do
     if (countName:find(itemName)) then
