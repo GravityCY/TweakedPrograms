@@ -1,6 +1,7 @@
 local tableutils = require("tableutils");
 local itemutils = require("itemutils");
 
+local buffer = peripheral.wrap("minecraft:barrel_0");
 local drawers = peripheral.find("storagedrawers:standard_drawers_4");
 
 local f = string.format;
@@ -19,6 +20,24 @@ local function count()
   return kt;
 end
 
+local function putAll()
+  for bufferSlot, bufferItem in pairs(buffer.list()) do
+    for _, drawer in ipairs(drawers) do
+      local items = drawer.list();
+      for slot = 1, drawer.size() do
+        local item = items[slot];
+        if (item == nil) then 
+          buffer.pushItems(peripheral.getName(drawer), bufferSlot, 64, slot);
+        else
+          if (bufferItem.name == item.name) then
+            buffer.pushItems(peripheral.getName(drawer), bufferSlot, 64, slot);
+          end
+        end
+      end
+    end
+  end
+end
+
 local commands = {};
 commands["list"] = function(args)
   if (args[1] == nil) then return end
@@ -28,6 +47,14 @@ commands["list"] = function(args)
     if (countName:find(itemName)) then
       print(f("%s %s", countNumber, itemutils.format(countName)));
     end
+  end
+end
+
+commands["put"] = function(args)
+  if (args[1] == nil) then return end
+  local type = args[1];
+  if (type == "all") then
+    
   end
 end
 
