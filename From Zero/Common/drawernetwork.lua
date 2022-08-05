@@ -1,4 +1,4 @@
-local tabu = require("tabutils");
+local tableutils = require("tableutils");
 local itemutils = require("itemutils");
 
 local drawers = peripheral.find("storagedrawers:standard_drawers_4");
