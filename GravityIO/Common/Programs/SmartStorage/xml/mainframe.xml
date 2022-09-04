@@ -1,0 +1,3 @@
+<frame>
+  <pane width="({term.getSize()})[1]" height="3" bg="red" />
+</frame>
