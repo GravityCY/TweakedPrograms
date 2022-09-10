@@ -1,0 +1,10 @@
+<frame bg="lightGray">
+  <pane width="parent.w" height="1" bg="red" />
+  <label x="parent.w / 2 - 6" y="1" fg="white" text="SmartStorage"/>
+  <button onClick="onCraftClick" x="3" y="3" width="15" height="3" fg="white" text="Craft"/>
+  <button onClick="onListClick" x="3" y="7" width="15" height="3" fg="white" text="List"/>
+  <button onClick="onCleanClick" x="3" y="11" width="15" height="3" fg="white" text="Clean"/>
+  <button onClick="onFilterClick" x="3" y="15" width="15" height="3" fg="white" text="Filter"/>
+  <pane x="1" y="parent.h" width="parent.w" height="1" bg="gray" />
+  <button onClick="onPauseClick" x="parent.w - 6" y="parent.h" width="7" height="1" bg="red" fg="white" text="Pause"/>
+</frame>

@@ -14,10 +14,6 @@ local isForward = true;
 local goRight = true;
 local away = true;
 
-local function doRepeat(fn, times, ...)
-  for i = 1, times do fn(...); end
-end
-
 local function requestInput(request)
   write(request);
   return read();

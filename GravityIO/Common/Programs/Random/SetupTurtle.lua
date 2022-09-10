@@ -3,7 +3,7 @@ local tinv = peripheral.wrap(read());
 local drive = peripheral.find("drive");
 local daddr = peripheral.getName(drive);
 
-local programs = {"TurtleUtils.lua", "RandomName.lua", "bmine.lua", "bminef.lua", "db.lua", "dbapi.lua"};
+local programs = {"TurtleUtils.lua", "bmine.lua"};
 
 for slot, item in pairs(tinv.list()) do
   if (item.name:find("turtle")) then
@@ -12,7 +12,6 @@ for slot, item in pairs(tinv.list()) do
     local mpath = drive.getMountPath();
     for _, program in ipairs(programs) do
       local outPath = mpath .. "/" .. program;
-      if (not fs.exists(program)) then shell.run("db", program); end
       if (fs.exists(outPath)) then fs.delete(outPath) end
       fs.copy(program, outPath);
     end

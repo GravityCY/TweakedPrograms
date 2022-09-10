@@ -90,7 +90,7 @@ function p.getByKey(key, asPeriph)
   asPeriph = default(true, asPeriph);
 
   local t = {};
-  for _, periph in ipairs(p.getAll()) do
+  for _, periph in ipairs(p.getAll(asPeriph)) do
     if (periph[key] ~= nil) then t[#t+1] = getAddress(not asPeriph, periph) end
   end
   return t;

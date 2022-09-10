@@ -128,7 +128,6 @@ function t.wrap(input)
     for slot, item in pairs(p.list()) do
       local push = p.pushItems(toAddr, slot, item.count);
       pushed = pushed + push;
-      if (pushed >= item.count) then break end
     end
     return pushed;
   end

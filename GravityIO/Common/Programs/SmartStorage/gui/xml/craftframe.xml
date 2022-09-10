@@ -1,0 +1,11 @@
+<frame>
+  <label x="parent.w / 2 - 4" fg="white" text="Crafting"/>
+  <pane width="parent.w" bg="orange" />
+  <input default="..." onChange="onSearch" type="text" x="parent.w - 12" width="13" bg="white" fg="black"/>
+  <frame id="craftListFrame" x="2" y="3" height="parent.h - 3" width="parent.w" scrollable="true">
+    
+  </frame>
+  <pane x="1" y="parent.h" width="parent.w" bg="lightGray"/>
+  <button onClick="onNewClick" x="1" y="parent.h" width="7" height="1" bg="green" fg="white" text="New"/>
+  <button onClick="onBackClick" x="parent.w - 7" y="parent.h" width="8" height="1" bg="red" fg="white" text="Back"/>
+</frame>

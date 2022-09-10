@@ -1,3 +1,5 @@
+local TurtleUtils = require("TurtleUtils");
+local sides = TurtleUtils.sides;
 local dist = ...;
 
 local function request(req)
@@ -7,11 +9,9 @@ end
 
 local function move()
   for i = 1, dist do
-    turtle.dig();
-    turtle.forward();
-    turtle.digDown();
-    turtle.down();
-    turtle.placeDown();
+    TurtleUtils.goDig(sides.forward);
+    TurtleUtils.dig(sides.up);
+    TurtleUtils.goDig(sides.down);
   end
 end
 

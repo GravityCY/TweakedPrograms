@@ -11,6 +11,13 @@ blacklist["computercraft:turtle_advanced"] = true;
 blacklist["computercraft:computer_normal"] = true;
 blacklist["computercraft:computer_advanced"] = true;
 
+local horizSides = {};
+horizSides.back = 0;
+horizSides.left = 1;
+horizSides.forward = 2;
+horizSides.right = 3;
+
+
 local goSides = { [sides.forward]=turtle.forward,
                  [sides.down]=turtle.down,
                  [sides.up]=turtle.up,
@@ -46,6 +53,7 @@ local suckSides = { [sides.forward]=turtle.suck,
 local t = {};
 t.sides = sides;
 t.blacklist = blacklist;
+t.facing = sides.forward;
 
 local invSize = 16;
 
@@ -53,8 +61,7 @@ local getItemDetail = turtle.getItemDetail;
 
 local function inBlacklist(side)
   local _, block = t.inspect(side);
-  if (block) then return t.blacklist[block.name] ~= nil;
-  else return false end
+  return block ~= nil and t.blacklist[block.name] ~= nil;
 end
 
 local function diff(prev, new)
@@ -64,6 +71,14 @@ local function diff(prev, new)
     if (not pi and ni) then return i end
     if ((pi and ni) and pi.count < ni.count) then return i end
   end
+end
+
+function t.setFacing(side)
+  t.facing = side;
+end
+
+function t.getFacing()
+  return t.facing;
 end
 
 -- Will return a slot of an item based off ID
@@ -246,7 +261,9 @@ end
 -- Will turn (supports sides.back)
 function t.turn(side)
   local fn = turnSides[side];
-  if (fn) then return fn(); end
+  if (fn) then
+    return fn();
+  end
 end
 
 -- Will dig

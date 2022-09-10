@@ -17,12 +17,6 @@ local inventorySlot = {};
 
 local bufferAddr = nil;
 
-local Item = {};
-
-function Item.new(name, count)
-  return {name=name, count=count};
-end
-
 local function toLocalSlot(globalSlot)
   local total = 0;
   for i = 1, #inventorySizes do
@@ -86,11 +80,6 @@ local function getIndex(addr)
     if (inventoryAddr == addr) then return index; end
   end
 end
-
--- {
---   ["minecraft:oak_planks"]: { found = 5, slots = { {count=1, slot=1}, {count=2, slot=2}, {count=2, slot=3} }}
---   ["minecraft:chest"]: { found = 7, slots = {1, 2, 3} }
--- }
 
 function sn.getWhere(items)
   local result = {};

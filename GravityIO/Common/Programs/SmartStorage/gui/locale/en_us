@@ -1,0 +1,10 @@
+inAddr Enter Input Address: 
+recAddr Enter Recipe Register Address: 
+bufAddr Enter Buffer Address: 
+overType Enter Overflow Type: 
+interType Enter Interface Type: 
+craftNotEnough Don't have enough %s
+craftHasSub Has Sub-pattern
+craftWithSub Crafting with Sub-Pattern
+craftRecipe Crafting %d %s
+craftedRecipe Crafted %d %s

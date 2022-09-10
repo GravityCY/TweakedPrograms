@@ -13,8 +13,11 @@ local TableUtils = require("TableUtils");
 local CraftingAPI = require("CraftingAPI");
 local Localization = require("Localization");
 
+local args = {...};
+local isPaused = false;
+
 local mainDirectory = "/data/smart_storage/";
-local generalFile = mainDirectory .. "general";
+local dataPath = mainDirectory .. "data";
 local patternDirectory = mainDirectory .. "patterns/";
 local localeDirectory = mainDirectory .. "locale/";
 local filterDirectory = mainDirectory .. "inv_data/";
@@ -24,64 +27,35 @@ Localization.setSaveDirectory(localeDirectory);
 Localization.init();
 CraftingAPI.init();
 
+-- Addresses
 local inputAddr = nil;
+local redEnableAddr = nil;
 local recipeAddr = nil;
-local bufferAddr = nil;
 local overflowType = nil;
 local interfaceType = nil;
+local bufferAddr = nil;
+local crafterAddr = nil;
+local dumperAddr = nil;
+local vaultAddr = nil;
 
-local args = {...};
+-- Peripherals
+local monitor = nil;
+local inputPeriph = nil;
+local recipePeriph = nil;
+local bufferPeriph = nil;
+local overflowList = nil;
+local interfaceList =nil;
+local vaultPeriph = nil;
+local enablePeriph = nil;
+local modemPeriph = nil;
+local crafterTurtle = nil;
+local dumperTurtle = nil;
 
-local function reqInput(req)
-  write(req);
-  return read();
-end
-
-if (not fs.exists(generalFile)) then
-  inputAddr = reqInput(Localization.get("inAddr"));
-  recipeAddr = reqInput(Localization.get("recAddr"));
-  bufferAddr = reqInput(Localization.get("bufAddr"));
-  overflowType = reqInput(Localization.get("overType"));
-  interfaceType = reqInput(Localization.get("interType"));
-  local f = fs.open(generalFile, "w");
-  f.writeLine(inputAddr);
-  f.writeLine(recipeAddr);
-  f.writeLine(bufferAddr);
-  f.writeLine(overflowType);
-  f.writeLine(interfaceType);
-  f.close();
-else
-  local f = fs.open(generalFile, "r");
-  inputAddr = f.readLine();
-  recipeAddr = f.readLine();
-  bufferAddr = f.readLine();
-  overflowType = f.readLine();
-  interfaceType = f.readLine();
-  f.close();
-end
-
-local input = InvUtils.wrap(peripheral.wrap(inputAddr));
-local patternRegister = InvUtils.wrap(peripheral.wrap(recipeAddr));
-local overflowList = PerUtils.get(overflowType, true);
-local interfaceList = InvUtils.wrapList(PerUtils.blacklistSides(PerUtils.get(interfaceType, true)));
-local vault = InvUtils.wrap(peripheral.find("create:item_vault"));
-local buffer = InvUtils.wrap(bufferAddr);
-local vaultAddr = peripheral.getName(vault);
-
-local modem = peripheral.find("modem", rednet.open);
-
-local crafter = peripheral.find("turtle");
-local monitor = peripheral.find("monitor");
-monitor.setTextScale(0.5)
-
-local crafterAddr = peripheral.getName(crafter);
+local size = nil;
+local mw, mh = nil, nil;
 
 -- A string indexed lookup table of peripheral addresses and their respective inventories
 local invLookup = {};
-
-local size = vault.size();
-local mw, mh = monitor.getSize()
-
 -- A list of list of filter items
 -- filtersLookup["minecraft:chest_1"][1]
 local filtersLookup = {};
@@ -91,6 +65,10 @@ local filterLookup = {};
 -- A string indexed lookup table of item types and their total amount in the storage
 -- totalLookup["minecraft:dirt"] returns a total of dirt in the system
 local totalLookup = {};
+local reqLookup = {};
+-- A string indexed lookup table of item tag and their total amount in the storage
+-- tagLookup["minecraft:dirt"] returns a total of dirt in the system
+local tagLookup = {};
 
 local function isFilterItem(type)
   return filterLookup[type] ~= nil
@@ -102,15 +80,17 @@ end
 
 local function getFilledSlots()
   local x = 0
-  for _, _ in pairs(vault.list()) do x = x + 1 end
+  for _, _ in pairs(vaultPeriph.list()) do x = x + 1 end
   return x
 end
 
 local function saveFilter()
   for _, inv in ipairs(interfaceList) do
     local name = peripheral.getName(inv);
-    local format = string.gsub(name, ":", "_");
-    local file = fs.open(filterDirectory .. format, "w");
+    local namespace = ItemUtils.namespace(name);
+    local addr = ItemUtils.type(name);
+    local path = ("%s%s/%s"):format(filterDirectory, namespace, addr);
+    local file = fs.open(path, "w");
     for slot, item in pairs(inv.list()) do
       file.writeLine(slot)
       file.writeLine(item.name)
@@ -120,27 +100,28 @@ local function saveFilter()
 end
 
 local function loadFilter()
-  local fileNames = fs.list(filterDirectory);
-  for _, fileName in ipairs(fileNames) do
-
-    -- minecraft_chest_1
-    -- minecraft-chest_1
-    local ui = fileName:find("_");
-    local addr = fileName:sub(1, ui-1) .. ":" .. fileName:sub(ui+1);
-    if (peripheral.wrap(addr) ~= nil) then
-      filtersLookup[addr] = {};
-      local filterFile = fs.open(filterDirectory .. fileName, "r");
-      while true do
-        local line = filterFile.readLine();
-        if (line == nil) then break end
-        local slot = tonumber(line);
-        local type = filterFile.readLine();
-        filterLookup[type] = true;
-        filtersLookup[addr][slot] = type;
+  if (not fs.exists(filterDirectory)) then return end
+  for _, namespace in ipairs(fs.list(filterDirectory)) do
+    local namespacePath = filterDirectory .. namespace .. "/";
+    if (fs.exists(namespacePath)) then
+      for _, addr in ipairs(fs.list(namespacePath)) do
+        local fullAddr = namespace .. ":" .. addr;
+        if (peripheral.wrap(fullAddr) ~= nil) then
+          filtersLookup[fullAddr] = {};
+          local filterFile = fs.open(namespacePath .. addr, "r");
+          while true do
+            local line = filterFile.readLine();
+            if (line == nil) then break end
+            local slot = tonumber(line);
+            local type = filterFile.readLine();
+            filterLookup[type] = true;
+            filtersLookup[fullAddr][slot] = type;
+          end
+          filterFile.close();
+        else
+          fs.delete(filterDirectory .. "/" .. addr);
+        end
       end
-      filterFile.close();
-    else
-      fs.delete(filterDirectory .. "/" .. fileName);
     end
   end
 end
@@ -155,28 +136,29 @@ local function toOverflow(addr, slot, amount)
   return pulled;
 end
 
-local function addTotal(item, count)
-  local name = item.name;
-  for tag, _ in pairs(item.tags) do
-    tag = "tag/"..tag;
-    totalLookup[tag] = (totalLookup[tag] or 0) + count;
+local function addTotal(name, count)
+  local common = ItemUtils.get(name);
+   if (common.tags ~= nil) then
+    for tag, _ in pairs(common.tags) do
+      tagLookup[tag] = (tagLookup[tag] or 0) + count;
+    end
   end
   totalLookup[name] = (totalLookup[name] or 0) + count;
 end
 
 local function updateTotal()
-  for _, item in pairs(vault.list()) do
-    addTotal(item, item.count);
+  for _, item in pairs(vaultPeriph.list()) do
+    addTotal(item.name, item.count);
   end
 end
 
 local function pushItem(type, amount, addr, pushSlot)
   local pushed = 0;
-  for slot, item in pairs(vault.list()) do
+  for slot, item in pairs(vaultPeriph.list()) do
     if (item.name == type) then
-      local push = vault.pushItems(addr, slot, amount - pushed, pushSlot);
+      local push = vaultPeriph.pushItems(addr, slot, amount - pushed, pushSlot);
       pushed = pushed + push;
-      addTotal(item, -push);
+      addTotal(item.name, -push);
       if (pushed == amount) then break end
     end
   end
@@ -185,15 +167,15 @@ end
 
 local function pullItems(type, addr, slot, amount)
   if (type == nil) then return end
-  local pull = vault.pullItems(addr, slot, amount);
+  local pull = vaultPeriph.pullItems(addr, slot, amount);
   if (pull == 0) then return end
   addTotal(type, pull);
 end
 
 local function doStore()
-  for slot, item in pairs(input.list()) do
+  for slot, item in pairs(inputPeriph.list()) do
     if (isFilterItem(item.name)) then
-      local pushed = input.pushItems(vaultAddr, slot, 64);
+      local pushed = inputPeriph.pushItems(vaultAddr, slot, 64);
       addTotal(item.name, pushed);
     else toOverflow(inputAddr, slot, 64); end
   end
@@ -327,16 +309,16 @@ local function craft(product, want, sub)
       pushItem(type, times, crafterAddr, toCrafterSlot[slot]);
     end
     for slot, type in pairs(recipe.resources) do
-      buffer.push(crafterAddr, type, times, toCrafterSlot[slot]);
+      bufferPeriph.push(crafterAddr, type, times, toCrafterSlot[slot]);
     end
     rednet.broadcast(nil, "craft-start");
     rednet.receive("craft-end");
     for i = 1, 16 do
       if (sub) then
-        buffer.pullItems(crafterAddr, i, 64);
+        bufferPeriph.pullItems(crafterAddr, i, 64);
       else
         pullItem(recipe.product, crafterAddr, i, 64);
-        for slot, item in pairs(buffer.list()) do
+        for slot, item in pairs(bufferPeriph.list()) do
           pullItem(item.name, bufferAddr, slot, 64);
         end
       end
@@ -364,7 +346,7 @@ local function craftCMD(a1, a2)
         local _, key = os.pullEvent("key_up");
         if (key == keys.enter) then break end
       end
-      local items = patternRegister.list();
+      local items = recipePeriph.list();
       local resources = getResources(items);
       local product = getProduct(items);
       local count = getCount(items);
@@ -398,11 +380,24 @@ local function listCMD(a1)
   end
 end
 
-local function compute()
+local function doDump()
+  for item, req in pairs(reqLookup) do
+    local total = totalLookup[item];
+    if (total ~= nil and total >= req) then
+      pushItem(item, total - req, dumperAddr);
+    end
+  end
+end
+
+local function tasks()
   updateTotal();
   while true do
-    doStore();
-    if (redstone.getInput("bottom")) then doRestock(); end
+    if (isPaused) then sleep(1);
+    else
+      doStore();
+      doDump();
+      if (enablePeriph.getInput("top")) then doRestock(); end
+    end
   end
 end
 
@@ -445,7 +440,7 @@ local function renderPC()
     if (cmd == "craft") then craftCMD(userIn[2], userIn[3]);
     elseif (cmd == "list") then listCMD(userIn[2]);
     elseif (cmd == "clean") then 
-      for slot, item in pairs(vault.list()) do
+      for slot, item in pairs(vaultPeriph.list()) do
         if (not isFilterItem(item.name)) then
           toOverflow(vaultAddr, slot, 64);
         end
@@ -453,6 +448,29 @@ local function renderPC()
     elseif (cmd == "clear") then
       term.clear();
       term.setCursorPos(1, 1);
+    elseif (cmd == "exit") then
+      print("Goodbye...");
+      error();
+    elseif (cmd == "pause") then
+      isPaused = not isPaused;
+      if (isPaused) then print("Pausing...");
+      else print("Unpausing..."); end
+    elseif (cmd == "filter") then
+      saveFilter();
+      loadFilter();
+    elseif (cmd == "dump") then
+      write("Enter Item Name: ")
+      local itemName = read();
+      write("Enter Amount: ");
+      local itemAmount = tonumber(read());
+      write("If " .. itemName .. " is over " .. itemAmount .. " then dump it into lava? Y/N: ");
+      local confirm = read():lower();
+      while true do
+        if (confirm == "y") then
+          reqLookup[itemName] = itemAmount;
+          break
+        elseif (confirm == "n") then break end
+      end
     end
     if (#history >= 25) then table.remove(history, 1); end
     table.insert(history, userInStr);
@@ -463,17 +481,86 @@ local function main()
   for _, barrel in ipairs(interfaceList) do
     invLookup[peripheral.getName(barrel)] = barrel;
   end
-  if (#args == 0) then
-    loadFilter();
-    parallel.waitForAll(compute, renderMonitor, renderPC)
-  else
-    local a1 = args[1];
-    if (a1 == "filter") then
-      saveFilter();
-    end
-  end
+  loadFilter();
+  parallel.waitForAll(tasks, renderMonitor, renderPC)
 end
 
+local function getPeripheral()
+  local _, addr = os.pullEvent("peripheral");
+  return addr;
+end
+
+local function pdui(current)
+  term.clear();
+  term.setCursorPos(1, 1);
+  print("------------ Peripheral Detection Mode ------------");
+  print("")
+  print("Will detect any Peripheral being enabled.");
+  print();
+  print("Enable a Modem by Right Clicking it while inactive");
+  print("Please Select: " .. current);
+end
+
+local function setup()
+  if (not fs.exists(dataPath)) then
+    pdui("Input Inventory");
+    inputAddr = getPeripheral();
+    pdui("Red Router Activation Block");
+    redEnableAddr = getPeripheral();
+    pdui("Recipe Register Inventory: ");
+    recipeAddr = getPeripheral();
+    pdui("Overflow Inventory\nJust Select 1 of the Inventories to Internally save the Type.");
+    overflowType = peripheral.getType(getPeripheral());
+    pdui("Interface Inventory\nJust Select 1 of the Inventories to Internally save the Type.");
+    interfaceType = peripheral.getType(getPeripheral());
+    pdui("Buffer Inventory");
+    bufferAddr = getPeripheral();
+    pdui("Crafter Turtle");
+    crafterAddr = getPeripheral();
+    pdui("Dumper Turtle");
+    dumperAddr = getPeripheral();
+  
+    local f = fs.open(dataPath, "w");
+    f.writeLine(inputAddr);
+    f.writeLine(redEnableAddr);
+    f.writeLine(recipeAddr);
+    f.writeLine(overflowType);
+    f.writeLine(interfaceType);
+    f.writeLine(bufferAddr);
+    f.writeLine(crafterAddr);
+    f.writeLine(dumperAddr);
+    f.close();
+  else
+    local f = fs.open(dataPath, "r");
+    inputAddr = f.readLine();
+    redEnableAddr = f.readLine();
+    recipeAddr = f.readLine();
+    overflowType = f.readLine();
+    interfaceType = f.readLine();
+    bufferAddr = f.readLine();
+    crafterAddr = f.readLine();
+    dumperAddr = f.readLine();
+    f.close();
+  end
+  inputPeriph = InvUtils.wrap(peripheral.wrap(inputAddr));
+  recipePeriph = InvUtils.wrap(peripheral.wrap(recipeAddr));
+  bufferPeriph = InvUtils.wrap(bufferAddr);
+  overflowList = PerUtils.get(overflowType, true);
+  interfaceList = InvUtils.wrapList(PerUtils.blacklistSides(PerUtils.get(interfaceType, true)));
+  vaultPeriph = InvUtils.wrap(peripheral.find("create:item_vault"));
+  vaultAddr = peripheral.getName(vaultPeriph);
+  enablePeriph = peripheral.wrap(redEnableAddr);
+  modemPeriph = peripheral.find("modem", rednet.open);
+  crafterTurtle = peripheral.wrap(crafterAddr);
+  dumperTurtle = peripheral.wrap(dumperAddr);
+  monitor = peripheral.find("monitor");
+
+  monitor.setTextScale(0.5)
+  size = vaultPeriph.size();
+  mw, mh = monitor.getSize();
+end
+
+setup();
 main();
 
 

@@ -238,7 +238,7 @@ local function doStore()
   for slot, item in pairs(input.list()) do
     if (isFilterItem(item.name)) then
       local pushed = input.pushItems(vaultAddr, slot, 64);
-      addTotal(item, pushed);
+      addTotal(item.name, pushed);
     else toOverflow(inputAddr, slot, 64); end
   end
 end
@@ -443,7 +443,6 @@ local function listCMD(a1)
 end
 
 local function tasks()
-  updateTotal();
   while true do
     if (paused) then sleep(1);
     else
@@ -478,20 +477,201 @@ local function renderMonitor()
     filledSlots = newFilledSlots;
     sleep(10);
   end
-end
-
+end 
 
 local function main()
   for _, barrel in ipairs(interfaceList) do
     invLookup[peripheral.getName(barrel)] = barrel;
   end
   loadFilter();
-  local mainFrame = Basalt.createFrame():addLayout("mainframe.xml");
-  Basalt.createVariable("onCraftClick", 
+  updateTotal();
+
+  local mainFrame = nil;
+  local craftFrame = nil;
+  local listFrame = nil;
+  local craftListFrame = nil;
+  local itemListFrame = nil;
+  local history = {};
+
+  local craftButtons = {};
+  local craftingRecipes = {};
+  local shownButtons = {};
+
+  local wspacing, hspacing = 5, 1;
+  local width, height = 0, 3;
+  local columns = 2;
+  local biggest = 0;
+
+  local itemFrames = {};
+  local itemNames = {};
+  local shownItems = {};
+
+  local function onCraft(self)
+    craft(craftingRecipes[self.getValue()]);
+  end
+
+  local function updateShown()
+    local index = 1;
+    for _, button in pairs(shownButtons) do
+      local column, row = index % columns, math.ceil(index / columns);
+      if (column == 0) then column = columns; end
+      local x, y = (column - 1) * width + (column - 1) * wspacing + 1, (row - 1) * height + (row - 1) * hspacing + 1;
+      button:setPosition(x, y);
+      index = index + 1;
+    end
+  end
+  local function updateShownItems()
+    local index = 1;
+    for _, itemFrame in pairs(shownItems) do
+      local column, row = index % columns, math.ceil(index / columns);
+      if (column == 0) then column = columns; end
+      local x, y = (column - 1) * width + (column - 1) * wspacing + 1, (row - 1) * height + (row - 1) * hspacing + 1;
+      itemFrame:setPosition(x, y);
+      index = index + 1;
+    end
+  end
+  
+  Basalt.setVariable("onFilterClick", 
+    function()
+      saveFilter();
+      loadFilter();
+    end
+  )
+  Basalt.setVariable("onPauseClick", 
+    function(self)
+      paused = not paused;
+      if (paused) then
+        self:setValue("Start")
+        self:setBackground(colors.green);
+      else
+        self:setBackground(colors.red);
+        self:setValue("Pause")
+      end
+    end
+  )
+  Basalt.setVariable("onBackClick", 
+    function()
+      table.remove(history, #history);
+      if (#history == 0) then mainFrame:show();
+      else history[#history]:show(); end
+    end
+  )
+  Basalt.setVariable("onCraftClick",
   function()
-    Basalt.debug("CRAFT");
+    table.insert(history, craftFrame);
+    craftFrame:show();
   end
   )
+  Basalt.setVariable("onListClick",
+  function()
+    table.insert(history, listFrame);
+    listFrame:show();
+  end
+  )
+  Basalt.setVariable("onCleanClick",
+  function()
+    Basalt.debug("CLEAN");
+  end
+  )
+  Basalt.setVariable("onSearch",
+    function(inputObj)
+      local search = inputObj:getValue()
+      for index, craftBtn in ipairs(craftButtons) do
+        if (not craftBtn:getValue():lower():find(search:lower())) then
+          craftBtn:hide();
+          shownButtons[index] = nil;
+        else
+          if (shownButtons[index] == nil) then
+            shownButtons[index] = craftBtn;
+            craftBtn:show();
+          end
+        end
+      end
+      updateShown()
+    end
+  )
+  Basalt.setVariable("onSearchList",
+    function(inputObj)
+      local search = inputObj:getValue()
+      for index, itemFrame in ipairs(itemFrames) do
+        if (not itemFrame:getObject("item"):getValue():lower():find(search:lower())) then
+          itemFrame:hide();
+          shownItems[index] = nil;
+        else
+          if (shownItems[index] == nil) then
+            shownItems[index] = itemFrame;
+            itemFrame:show();
+          end
+        end
+      end
+      updateShownItems()
+    end
+  )
+  Basalt.setVariable("onNewClick",
+    function()
+      local items = recipeReg.list();
+      local resources = getResources(items);
+      local product = getProduct(items);
+      local count = getCount(items);
+      CraftingAPI.add(CraftingAPI.Recipe(resources, product, count));
+      pullItem(resources[1], recipeAddr, 4, 64);
+      pullItem(resources[2], recipeAddr, 5, 64);
+      pullItem(resources[3], recipeAddr, 6, 64);
+      pullItem(resources[4], recipeAddr, 13, 64);
+      pullItem(resources[5], recipeAddr, 14, 64);
+      pullItem(resources[6], recipeAddr, 15, 64);
+      pullItem(resources[7], recipeAddr, 22, 64);
+      pullItem(resources[8], recipeAddr, 23, 64);
+      pullItem(resources[9], recipeAddr, 24, 64);
+      pullItem(product, recipeAddr, 17, 64);
+    end
+  )
+  mainFrame = Basalt.createFrame():addLayout("mainframe.xml");
+  craftFrame = Basalt.createFrame():addLayout("craftframe.xml");
+  listFrame = Basalt.createFrame():addLayout("listframe.xml");
+  craftListFrame = craftFrame:getDeepObject("craftListFrame");
+  itemListFrame = listFrame:getDeepObject("itemListFrame");
+  for index, recipe in ipairs(CraftingAPI.list()) do
+    local name = ItemUtils.format(recipe.product);
+    if (#name > biggest) then biggest = #name; end
+  end
+  width = biggest + 4;
+  for index, recipe in ipairs(CraftingAPI.list()) do
+    local button = craftListFrame:addButton()
+    local column, row = index % columns, math.ceil(index / columns);
+    if (column == 0) then column = columns; end
+    local x, y = (column - 1) * width + (column - 1) * wspacing + 1, (row - 1) * height + (row - 1) * hspacing + 1;
+    button:setBackground(colors.red);
+    button:setSize(width, height);
+    button:setPosition(x, y);
+    button:setForeground(colors.white);
+    button:setText(ItemUtils.format(recipe.product));
+    table.insert(craftButtons, button);
+    table.insert(shownButtons, button);
+    craftingRecipes[ItemUtils.format(recipe.product)] = recipe.product;
+  end
+  local index = 1;
+  for name, total in pairs(totalLookupItem) do
+    local itemFrame = itemListFrame:addFrame()
+    local column, row = index % columns, math.ceil(index / columns);
+    if (column == 0) then column = columns; end
+    local x, y = (column - 1) * width + (column - 1) * wspacing + 1, (row - 1) * height + (row - 1) * hspacing + 1;
+    itemFrame:setBackground(colors.red);
+    itemFrame:setSize(width, height);
+    itemFrame:setPosition(x, y);
+    itemFrame:setForeground(colors.white);
+    itemFrame:addLabel("item")
+              :setText(ItemUtils.format(name))
+              :setForeground(colors.white)
+              :setPosition("parent.w / 2 - self.w / 2", 2);
+    itemFrame:addLabel("count")
+              :setText("x"..total)
+              :setForeground(colors.white)
+              :setPosition("parent.w - self.w", "parent.h")
+    table.insert(itemFrames, itemFrame);
+    table.insert(shownItems, itemFrame);
+    index = index + 1;
+  end
   parallel.waitForAll(Basalt.autoUpdate, tasks, renderMonitor)
 end
 
