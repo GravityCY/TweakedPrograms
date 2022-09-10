@@ -1,29 +1,24 @@
-local moveFrom = {
-  "reinfbarrel:diamond_barrel_22",
-  "reinfbarrel:diamond_barrel_23",
-  "reinfbarrel:diamond_barrel_24",
-  "reinfbarrel:diamond_barrel_25",
-  "reinfbarrel:diamond_barrel_26",
-  "reinfbarrel:diamond_barrel_27",
-  "reinfbarrel:diamond_barrel_28",
-  "reinfbarrel:diamond_barrel_29"
-};
-local moveTo = {
-  "reinfbarrel:diamond_barrel_12",
-  "reinfbarrel:diamond_barrel_13",
-  "reinfbarrel:diamond_barrel_14",
-  "reinfbarrel:diamond_barrel_15",
-  "reinfbarrel:diamond_barrel_16",
-  "reinfbarrel:diamond_barrel_17",
-  "reinfbarrel:diamond_barrel_18",
-  "reinfbarrel:diamond_barrel_19",
-  "reinfbarrel:diamond_barrel_20",
-  "reinfbarrel:diamond_barrel_21"
-};
 
-for index, addr in ipairs(moveFrom) do
-  local inv = peripheral.wrap(addr);
+local InvUtils = require("InvUtils");
+
+local from = InvUtils.wrapList({peripheral.find("reinfbarrel:diamond_barrel")});
+local to = InvUtils.wrapList({peripheral.find("reinfbarrel:gold_barrel")});
+
+local temp = {};
+for index, inv in ipairs(to) do
+  if (inv.taken() ~= inv.size()) then
+    table.insert(temp, inv);
+  end
+end
+to = temp;
+
+for index, inv in ipairs(from) do
   for slot, item in pairs(inv.list()) do
-    inv.pushItems(moveTo[index], slot, 64);
+    local pushed = 0;
+    for _, toInv in ipairs(to) do
+      local push = inv.pushItems(peripheral.getName(toInv), slot, item.count - pushed);
+      pushed = pushed + push;
+      if (pushed == item.count) then break end
+    end
   end
 end
