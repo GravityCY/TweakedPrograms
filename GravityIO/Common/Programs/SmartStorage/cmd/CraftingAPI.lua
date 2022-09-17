@@ -3,7 +3,6 @@ t.saveDirectory = "/data/craftingapi/recipes/";
 
 local recipeLookup = {};
 
-
 local function load()
   if (not fs.exists(t.saveDirectory)) then return end
   for _, path in ipairs(fs.list(t.saveDirectory)) do

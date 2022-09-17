@@ -545,8 +545,8 @@ local function setup()
   inputPeriph = InvUtils.wrap(peripheral.wrap(inputAddr));
   recipePeriph = InvUtils.wrap(peripheral.wrap(recipeAddr));
   bufferPeriph = InvUtils.wrap(bufferAddr);
-  overflowList = PerUtils.get(overflowType, true);
-  interfaceList = InvUtils.wrapList(PerUtils.blacklistSides(PerUtils.get(interfaceType, true)));
+  overflowList = PerUtils.getType(overflowType, true);
+  interfaceList = InvUtils.wrapList(PerUtils.blacklistSides(PerUtils.getType(interfaceType, true)));
   vaultPeriph = InvUtils.wrap(peripheral.find("create:item_vault"));
   vaultAddr = peripheral.getName(vaultPeriph);
   enablePeriph = peripheral.wrap(redEnableAddr);

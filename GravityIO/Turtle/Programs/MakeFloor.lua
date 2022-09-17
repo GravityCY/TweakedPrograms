@@ -1,5 +1,5 @@
-local bt = require("bt");
-local tu = require("tu");
+local bt = require("BetterTurtle");
+local tu = require("TermUtils");
 local sides = bt.sides;
 
 local args = {...};

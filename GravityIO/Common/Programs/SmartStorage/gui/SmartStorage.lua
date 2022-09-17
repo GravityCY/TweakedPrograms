@@ -85,8 +85,8 @@ end
 local input = InvUtils.wrap(peripheral.wrap(inputAddr));
 local recipeReg = InvUtils.wrap(peripheral.wrap(recipeAddr));
 local buffer = InvUtils.wrap(bufferAddr);
-local overflowList = PerUtils.get(overflowType, true);
-local interfaceList = InvUtils.wrapList(PerUtils.blacklistSides(PerUtils.get(interfaceType, true)));
+local overflowList = PerUtils.getType(overflowType, true);
+local interfaceList = InvUtils.wrapList(PerUtils.blacklistSides(PerUtils.getType(interfaceType, true)));
 local vault = InvUtils.wrap(peripheral.find("create:item_vault"));
 local vaultAddr = peripheral.getName(vault);
 local redEnable = peripheral.wrap(redEnableAddr);

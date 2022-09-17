@@ -8,7 +8,6 @@ For example you can get all peripherals based off of a key within those peripher
 
 local p = {};
 local sides = { top=true, left=true, right=true, bottom=true, back=true, front=true };
-p.sides = sides;
 
 local function default(defaultInput, value)
   if (value == nil) then return defaultInput;
@@ -16,7 +15,7 @@ local function default(defaultInput, value)
 end
 
 local function getPeripheral(doGet, addr)
-  if (doGet) then return peripheral.wrap(addr); end
+  if (doGet) then return p.get(addr); end
   return addr;
 end
 
@@ -37,10 +36,20 @@ local function toAddress(obj)
   elseif(t == "string") then return obj; end
 end
 
+function p.wrap(per)
+  per.addr = peripheral.getName(per);
+  per.id, per.perType = peripheral.getType(per.addr);
+  per.namespace = per.addr:match("(.-):") or "computercraft";
+  per.id = per.addr:match("(.+)_");
+  per.type = per.addr:match(":(.+)_") or per.id;
+  per.index = tonumber(per.addr:match(".+_(.+)$"));
+  return per;
+end
+
 --- Given a table of addresses `addrsList` returns a table of peripherals from those addresses
 ---@param addrsList table
 ---@return table
-function p.toPeripheral(addrsList)
+function p.toPeripheralList(addrsList)
   local pList = {};
   for _, addr in ipairs(addrsList) do
     pList[#pList+1] = toPeripheral(addr);
@@ -51,7 +60,7 @@ end
 --- Given a table of peripherals `pList` returns a table of addresses from those peripherals
 ---@param pList table
 ---@return table
-function p.toAddress(pList)
+function p.toAddressList(pList)
 
   local addrList = {};
   for _, periph in ipairs(pList) do
@@ -64,7 +73,7 @@ end
 --- @param asPeriph boolean
 --- @return table
 function p.getAll(asPeriph)
-  asPeriph = default(true, asPeriph);
+  asPeriph = (asPeriph ~= nil and asPeriph) or true;
 
   local t = {};
   for _, name in ipairs(peripheral.getNames()) do
@@ -73,11 +82,20 @@ function p.getAll(asPeriph)
   return t;
 end
 
+--- Given a string `addr` returns a wrapped peripheral
+--- @param addr string
+--- @return table
+function p.get(addr)
+  local per = peripheral.wrap(addr);
+  if (per == nil) then return nil end
+  return p.wrap(per);
+end
+
 --- Given a string `type` returns a table with peripherals of the type matching the `type` string
 --- @param type string
 --- @param asPeriph boolean
 --- @return table
-function p.get(type, asPeriph)
+function p.getType(type, asPeriph)
   local all = p.getAll(asPeriph);
   return p.whitelist(all, {[type] = true})
 end
@@ -86,7 +104,7 @@ end
 --- @param key string
 --- @param asPeriph boolean
 --- @return table
-function p.getByKey(key, asPeriph)
+function p.getKey(key, asPeriph)
   asPeriph = default(true, asPeriph);
 
   local t = {};
@@ -141,7 +159,7 @@ function p.blacklist(t, bl)
   for _, ap in ipairs(t) do
     local pp = toPeripheral(ap);
     local type = peripheral.getType(pp);
-    if (not bl[type]) then ot[#ot+1] = pp end
+    if (bl[type] == nil) then ot[#ot+1] = pp end
   end
   return ot;
 end
@@ -155,7 +173,7 @@ function p.blacklistSides(t)
   for _, ap in ipairs(t) do
     local pp = toPeripheral(ap);
     local addr = toAddress(ap);
-    if (not p.sides[addr]) then ot[#ot+1] = ap end
+    if (not sides[addr]) then ot[#ot+1] = ap end
   end
   return ot;
 end
@@ -181,13 +199,23 @@ function p.whitelist(t, wl)
   return ot;
 end
 
+function p.whitelistType(t, wl)
+  local ot = {};
+  for _, ap in ipairs(t) do
+    local pp = toPeripheral(ap);
+    local _, ptype = peripheral.getType(pp);
+    if (wl[ptype]) then ot[#ot+1] = pp end
+  end
+  return ot;
+end
+
 --- Given a list of peripherals will return a filtered list of all the side peripherals.
 --- @return table
 function p.whitelistSides(t)
   local ot = {};
   for _, ap in ipairs(t) do
     local addr = toAddress(ap);
-    if (p.sides[addr]) then ot[#ot+1] = ap end
+    if (sides[addr]) then ot[#ot+1] = ap end
   end
   return ot;
 end

@@ -16,6 +16,7 @@ local SNAPI = require("StorageNetworkAPI");
 
 local args = {...};
 local isPaused = false;
+local renderSleep = 3;
 
 local mainDirectory = "/data/smart_storage/";
 local dataPath = mainDirectory .. "data";
@@ -76,7 +77,7 @@ local function isFilterItem(type)
 end
 
 local function getTotal(type)
-  return totalLookup[type];
+  return totalLookup[type] or 0;
 end
 
 local function getFilledSlots()
@@ -127,17 +128,15 @@ local function loadFilter()
   end
 end
 
-local function getPeripheral(obj)
-  local t = type(obj);
-  if (t == "string") then return peripheral.wrap(obj);
-  elseif (t == "table") then return obj; end
-end
-
-local function toOverflow(from, slot, amount)
+local function toOverflow(fromAddr, slot, amount)
   local pushed = 0;
   for _, overflow in ipairs(overflowList) do
-    local addr = peripheral.getName(overflow);
-    local push = from.pushItems(addr, slot, amount - pushed);
+    local push = 0;
+    if (fromAddr == "snapi") then
+      push = SNAPI.pushItems(overflow.addr, slot, amount - pushed);
+    else
+      push = overflow.pullItems(fromAddr, slot, amount - pushed);
+    end
     pushed = pushed + push;
     if (pushed == amount) then break end
   end
@@ -183,34 +182,6 @@ local function updateTotal()
   end
 end
 
-local function doStore()
-  for slot, item in pairs(inputPeriph.list()) do
-    if (isFilterItem(item.name)) then
-      pullItems(item.name, inputAddr, slot, 64);
-    else toOverflow(inputPeriph, slot, 64); end
-  end
-end
-
-local function doRestock()
-  for addr, filterList in pairs(filtersLookup) do
-    local interface = invLookup[addr];
-    local interfaceItems = interface.list();
-    for slot, type in pairs(filterList) do
-      local item = interfaceItems[slot];
-      local common = ItemUtils.get(type);
-      local count = getTotal(type);
-      if (count ~= nil and count > 0) then
-        if (item == nil) then 
-          push(addr, type, common.maxCount, slot)
-        end
-        if (item ~= nil and item.count < common.maxCount) then 
-          push(addr, type, common.maxCount - item.count, slot);
-        end
-      end
-    end
-  end
-end
-
 local function toList()
   local t = {}
   local index = 1
@@ -250,15 +221,110 @@ local function printItems()
   end
 end
 
-local function getNeed(cost)
+local function batch()
+  local items = {};
+  local functions = {};
+  for index, inv in ipairs(interfaceList) do
+    functions[index] = function() items[index] = inv.list() end
+  end
+  parallel.waitForAll(table.unpack(functions))
+  return items;
+end
+local function toIndex(addr)
+
+  for index, interface in ipairs(interfaceList) do
+    if (interface.addr == addr) then return index; end
+  end
+end
+
+local function doStore()
+  for slot, item in pairs(inputPeriph.list()) do
+    if (isFilterItem(item.name)) then
+      pullItems(item.name, inputAddr, slot, 64);
+    else toOverflow(inputAddr, slot, 64); end
+  end
+end
+
+local function doRestock()
+  local batchItems = batch();
+  for addr, filterList in pairs(filtersLookup) do
+    local interfaceItems = batchItems[toIndex(addr)];
+    for slot, type in pairs(filterList) do
+      local item = interfaceItems[slot];
+      local common = ItemUtils.get(type);
+      if (item == nil or item.count < common.maxCount) then
+        local total = getTotal(type);
+        local count = (item and item.count) or 0;
+        if (total ~= nil and total > 0) then
+          push(addr, type, common.maxCount - count, slot)
+        end
+      end
+    end
+  end
+end
+
+local function doDump()
+  for item, req in pairs(reqLookup) do
+    local total = totalLookup[item];
+    if (total ~= nil and total >= req) then
+      parallel.waitForAll(push(dumperAddr, item, total - req));
+    end
+  end
+end
+
+local function tasks()
+  updateTotal();
+  while true do
+    if (isPaused) then sleep(1);
+    else
+      parallel.waitForAll(doStore, doDump)
+      if (enablePeriph.getInput("top")) then doRestock(); end
+    end
+  end
+end
+
+local function renderMonitor() 
+  local filledSlots = 0;
+  while true do
+    local newFilledSlots = getFilledSlots();
+    monitor.clear();
+    monitor.setCursorPos(1,1);
+    monitor.setCursorBlink(false);
+    local centColor = colors.lightGray;
+    local slotColor = colors.lightGray;
+    if (newFilledSlots > filledSlots) then
+      centColor = colors.green;
+      slotColor = colors.red;
+    elseif (newFilledSlots < filledSlots) then
+      centColor = colors.red;
+      slotColor = colors.green;
+    end
+    printMonitor("Storage Fill Percent:")
+    printMonitor(string.format("%.2f%%", newFilledSlots / size * 100), centColor);
+    printMonitor("Free Slots:");
+    printMonitor(size - newFilledSlots, slotColor);
+    printMonitor("Items Stored:");
+    printItems();
+    filledSlots = newFilledSlots;
+    sleep(renderSleep);
+  end
+end
+
+local toCrafterSlot = {1, 2, 3, 5, 6, 7, 9, 10, 11};
+
+-- Gets how much you'd need to craft
+local function getNeed(cost, usedLookup)
+  usedLookup = usedLookup or {};
   local need = {};
   for name, count in pairs(cost) do
-    local total = getTotal(name) or 0;
-    local needVal = count - total;
-    if (needVal < 0) then needVal = 0; end
-    need[name] = needVal;
+    local total = getTotal(name);
+    need[name] = math.max(count - total + (usedLookup[name] or 0), 0);
   end
   return need;
+end
+
+local function getNeedType(type, cost, used)
+  return math.max(cost - getTotal(type) + used, 0);
 end
 
 local function getResources(items)
@@ -288,54 +354,156 @@ local function getCount(items)
   if (items[17] ~= nil) then return items[17].count; end
 end
 
-local toCrafterSlot = {1, 2, 3, 5, 6, 7, 9, 10, 11};
 
--- Check Stack Sizes
+--#region
+-- Problems that need solving
+  -- Recipes that have resources that one needs the other resource in order to be crafted can be problematic
+    -- A Barrel for example needs planks and slabs, slabs need planks, for example;
+    -- Lets say you have 6 planks, the barrel recipe thinks it has enough planks but needs 2 slabs which need planks, you craft slabs using up the planks and then the barrel doesn't
+    -- have enough planks even though the initial check says it does
+    -- You'd need to either somehow detect that the planks are needed for the parent recipe when crafting slabs, and instead of using the planks, craft new ones
+    -- OR do another check at the end of the parent recipe I guess
+    -- OR Each subrecipe gets a total of what it's parent recipe needs, for example:
+    -- A barrel needs 2 slabs, 6 planks
+    -- You need 2 slabs and 0 planks cause you have enough planks
+    -- You need to craft 2 slabs which needs 3 planks, so you say
+    -- There's 6 planks in system but my parent recipe needs 6 planks so realistically there's 0 in storage
+    -- So basically itemsInStorage - itemsParentNeeds == how much I really have in storage 
+    -- And I think any subrecipes of subrecipes that would SOMEHOW need planks will need to know the top parent will still need 6 planks cause I think it's possible
+    -- to somehow make it think that there is enough in storage if you ONLY give it the immediate parents needs 
+    -- so basically merge the tables from recipe to subrecipe to subrecipe etc.
+    -- OR send all required items into a buffer inventory
+
+  -- Sending Recipes that need items higher than the items stack sizes is problematic
+    -- Let's say you need 512 Oak Planks, you will need 128 logs to be crafted, logs have a stack size of 64
+    -- You will need to send 64 logs to the turtles slot twice
+    -- Kinda like > for i = 1, 128 / 64 do 
+    -- But for cases that have variable stack sizes like 1 item stack size is 16 and the other is 64
+    -- You'd need to work based off of the lowest stack size
+    -- An Eye of Ender for Example; if you want 32 eyes of ender
+    -- The blaze powder stack size is 64, the ender pearl stack size is 16
+    -- You'd need to send 32 blaze powder since that's less than it's stack size
+    -- Then 16 Ender Pearls, craft once.
+    -- Then again 16 ender pearls, craft once again.
+    -- How the fuck do you implements all this shit
+
+  -- Sending Recipes that produce more stacks than the turtles inventory is problematic
+    -- 17 Diamond Pickaxes will take up 17 slots of the turtle when it only has 16
+    -- You will need to send resources worth 16 diamond pickaxes once and then resources worth 1 diamond pickaxe once again.
+    -- or send all the resources for 17 diamond pickaxes, and craft only 16, since turtle.craft() can take an argument of how many to craft
+
+-- Somehow check you have all of the required items before trying to craft anything, even the subrecipes if out of resources.
+--#endregion
+
+local function isEnough(recipe, times, parentUsed)
+  parentUsed = parentUsed or {};
+  print("Checking if enough for " .. recipe.product);
+  local costLookup = CraftingAPI.total(recipe, times);
+  print(parentUsed["minecraft:oak_log"])
+  local needLookup = getNeed(costLookup, parentUsed);
+  print(needLookup["minecraft:oak_log"])
+  for type, need in pairs(needLookup) do
+    parentUsed[type] = (parentUsed[type] or 0) + need;
+  end
+  for type, need in pairs(needLookup) do
+    if (need ~= 0) then
+      local sub = CraftingAPI.get(type);
+      print("need " .. need .. " " .. type);
+      if (sub ~= nil) then
+        if (not isEnough(sub, math.max(need / sub.count), parentUsed)) then return false;
+        else print(type .. " is enough"); end
+      else return false; end
+    else
+      print("have enough " .. type);
+    end
+  end
+  return true
+end
+
 local function craft(product, want, sub)
-  if (sub == nil) then sub = false; end
-  if (CraftingAPI.exists(product)) then
-    local recipe = CraftingAPI.get(product);
-    local common = ItemUtils.get(recipe.product);
-    if (want == nil) then want = recipe.count; end
-    local times = math.ceil(want / recipe.count);
-    local count = times * recipe.count;
+  local recipe = CraftingAPI.get(product);
+  if (recipe == nil) then return end
+  want = want or recipe.count;
+  local times = math.max(want / recipe.count);
+  if (sub or isEnough(recipe, times)) then
+    local count = recipe.count * times;
     local costLookup = CraftingAPI.total(recipe, times);
     local needLookup = getNeed(costLookup);
     for type, need in pairs(needLookup) do
       if (need ~= 0) then
-        print((Localization.get("craftNotEnough")):format(ItemUtils.format(type)));
-        if (CraftingAPI.exists(type)) then
-          print(Localization.get("craftHasSub"));
-          print(Localization.get("craftWithSub"));
-          if (not craft(type, need, true)) then return false; end
-        else return false; end
+        print("Need " .. need .. " " .. type);
+        craft(type, need, true);
       end
     end
-    print((Localization.get("craftRecipe")):format(count, product));
-    for slot, type in pairs(recipe.resources) do
-      push(crafterAddr, type, times, toCrafterSlot[slot]);
+    local smallest = 64;
+    for type, _ in pairs(costLookup) do
+      local common = ItemUtils.get(type);
+      if (common.maxCount < smallest) then
+        smallest = common.maxCount;
+      end
     end
-    for slot, type in pairs(recipe.resources) do
-      bufferPeriph.push(crafterAddr, type, times, toCrafterSlot[slot]);
-    end
-    rednet.broadcast(nil, "craft-start");
-    rednet.receive("craft-end");
-    for i = 1, 16 do
-      if (sub) then
-        bufferPeriph.pullItems(crafterAddr, i, 64);
-      else
+    print("Crafting " .. count .. " " .. product);
+    local sent = 0;
+    for x = 1, math.ceil(times / smallest) do
+      for i, type in pairs(recipe.resources) do
+        print("Sending " .. type .. " at slot " .. i);
+        push(crafterAddr, type, math.min(smallest, times - sent), toCrafterSlot[i]);
+      end
+      sent = sent + smallest;
+      rednet.broadcast(nil, "craft-start");
+      rednet.receive("craft-end");
+      for i = 1, 16 do
+        print("Pulling  from " .. i);
         pullItems(recipe.product, crafterAddr, i, 64);
-        for slot, item in pairs(bufferPeriph.list()) do
-          pullItems(item.name, bufferAddr, slot, 64);
-        end
       end
     end
-    print((Localization.get("craftedRecipe"):format(count, product)));
-    return true;
+    print("Crafted " .. count .. " " .. product);
   else
-    print("No such Pattern.");
+    print("not Enough");
   end
 end
+
+-- local function craft(product, want, sub)
+--   if (sub == nil) then sub = false; end
+--   if (CraftingAPI.exists(product)) then
+--     local recipe = CraftingAPI.get(product);
+--     if (want == nil) then want = recipe.count; end
+--     local times = math.ceil(want / recipe.count);
+--     local count = times * recipe.count;
+--     local costLookup = CraftingAPI.total(recipe, times);
+--     local needLookup = getNeed(costLookup);
+--     for type, need in pairs(needLookup) do
+--       if (need ~= 0) then
+--         print((Localization.get("craftNotEnough")):format(ItemUtils.format(type)));
+--         if (CraftingAPI.exists(type)) then
+--           print(Localization.get("craftHasSub"));
+--           print(Localization.get("craftWithSub"));
+--           if (not craft(type, need, true)) then return false; end
+--         else return false; end
+--       else
+--         push(bufferAddr, type, costLookup[type]);
+--       end
+--     end
+--     print((Localization.get("craftRecipe")):format(count, product));
+--     for slot, type in pairs(recipe.resources) do
+--       bufferPeriph.push(crafterTurtle.addr, type, times, toCrafterSlot[slot]);
+--     end
+--     rednet.broadcast(nil, "craft-start");
+--     rednet.receive("craft-end");
+--     for i = 1, 16 do
+--       bufferPeriph.pullItems(crafterAddr, i, 64);
+--     end
+--     if (not sub) then
+--       for slot, item in pairs(bufferPeriph.list()) do
+--         pullItems(item.name, bufferAddr, slot, 64);
+--       end
+--     end
+--     print((Localization.get("craftedRecipe"):format(count, product)));
+--     return true;
+--   else
+--     print("No such Pattern.");
+--   end
+-- end
 
 local function craftCMD(a1, a2)
   if (a1 == "list") then
@@ -371,7 +539,9 @@ local function craftCMD(a1, a2)
     else
       local want = nil;
       if (a2 ~= nil) then want = tonumber(a2) end
+      isPaused = true;
       craft(a1, want);
+      isPaused = false;
     end
 end
 
@@ -384,54 +554,6 @@ local function listCMD(a1)
     else
       print(("%d %s"):format(count, type));
     end
-  end
-end
-
-local function doDump()
-  for item, req in pairs(reqLookup) do
-    local total = totalLookup[item];
-    if (total ~= nil and total >= req) then
-      pushItems(item, total - req, dumperAddr);
-    end
-  end
-end
-
-local function tasks()
-  updateTotal();
-  while true do
-    if (isPaused) then sleep(1);
-    else
-      doStore();
-      doDump();
-      if (enablePeriph.getInput("top")) then doRestock(); end
-    end
-  end
-end
-
-local function renderMonitor() 
-  local filledSlots = 0;
-  while true do
-    local newFilledSlots = getFilledSlots();
-    monitor.clear();
-    monitor.setCursorPos(1,1);
-    monitor.setCursorBlink(false);
-    local centColor = colors.lightGray;
-    local slotColor = colors.lightGray;
-    if (newFilledSlots > filledSlots) then
-      centColor = colors.green;
-      slotColor = colors.red;
-    elseif (newFilledSlots < filledSlots) then
-      centColor = colors.red;
-      slotColor = colors.green;
-    end
-    printMonitor("Storage Fill Percent:")
-    printMonitor(string.format("%.2f%%", newFilledSlots / size * 100), centColor);
-    printMonitor("Free Slots:");
-    printMonitor(size - newFilledSlots, slotColor);
-    printMonitor("Items Stored:");
-    printItems();
-    filledSlots = newFilledSlots;
-    sleep(10);
   end
 end
 
@@ -449,7 +571,7 @@ local function renderPC()
     elseif (cmd == "clean") then
       for slot, item in pairs(SNAPI.list()) do
         if (not isFilterItem(item.name)) then
-          toOverflow(SNAPI, slot, 64);
+          toOverflow("snapi", slot, 64);
         end
       end
     elseif (cmd == "clear") then
@@ -482,14 +604,6 @@ local function renderPC()
     if (#history >= 25) then table.remove(history, 1); end
     table.insert(history, userInStr);
   end
-end
-
-local function main()
-  for _, barrel in ipairs(interfaceList) do
-    invLookup[peripheral.getName(barrel)] = barrel;
-  end
-  loadFilter();
-  parallel.waitForAll(tasks, renderMonitor, renderPC)
 end
 
 local function getPeripheral()
@@ -554,16 +668,16 @@ local function setup()
     dumperAddr = f.readLine();
     f.close();
   end
-  inputPeriph = InvUtils.wrap(peripheral.wrap(inputAddr));
-  recipePeriph = InvUtils.wrap(peripheral.wrap(recipeAddr));
+  inputPeriph = InvUtils.wrap(PerUtils.get(inputAddr));
+  recipePeriph = InvUtils.wrap(PerUtils.get(recipeAddr));
   bufferPeriph = InvUtils.wrap(bufferAddr);
-  overflowList = PerUtils.get(overflowType, true);
-  interfaceList = InvUtils.wrapList(PerUtils.blacklistSides(PerUtils.get(interfaceType, true)));
-  storageList = {peripheral.find(storageType)};
-  enablePeriph = peripheral.wrap(redEnableAddr);
+  overflowList = PerUtils.getType(overflowType, true);
+  interfaceList = InvUtils.wrapList(PerUtils.blacklistSides(PerUtils.getType(interfaceType, true)));
+  storageList = PerUtils.getType(storageType, true);
+  enablePeriph = PerUtils.get(redEnableAddr);
   modemPeriph = peripheral.find("modem", rednet.open);
-  crafterTurtle = peripheral.wrap(crafterAddr);
-  dumperTurtle = peripheral.wrap(dumperAddr);
+  crafterTurtle = PerUtils.get(crafterAddr);
+  dumperTurtle = PerUtils.get(dumperAddr);
   monitor = peripheral.find("monitor");
 
   for _, p in ipairs(storageList) do SNAPI.add(peripheral.getName(p)); end
@@ -571,9 +685,11 @@ local function setup()
   monitor.setTextScale(0.5)
   size = SNAPI.size();
   mw, mh = monitor.getSize();
+
+  for _, barrel in ipairs(interfaceList) do invLookup[barrel.addr] = barrel; end
+  loadFilter();
 end
 
 setup();
-main();
-
+parallel.waitForAll(tasks, renderMonitor, renderPC)
 

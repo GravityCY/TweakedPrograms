@@ -247,14 +247,20 @@ function t.goPos(ix, iy, iz, onFail)
   local vertSide = (iy > 0 and sides.up) or sides.down;
   local horizonSide = (iz > 0 and sides.right) or sides.left;
   for x=1, math.abs(ix) do
-    if (not t.go(frontSide)) then onFail(frontSide); end
+    if (not t.go(frontSide)) then
+      if (onFail ~= nil) then onFail(frontSide) end
+    end
   end
   for y=1, math.abs(iy) do
-    if (not t.go(vertSide)) then onFail(vertSide); end
+    if (not t.go(vertSide)) then 
+      if (onFail ~= nil) then onFail(vertSide); end
+    end
   end
   if (iz ~= 0) then t.turn(horizonSide); end
   for z=1, math.abs(iz) do
-    if (not t.go(sides.forward)) then onFail(sides.forward); end
+    if (not t.go(sides.forward)) then 
+      if (onFail ~= nil) then onFail(sides.forward); end
+    end
   end
 end
 

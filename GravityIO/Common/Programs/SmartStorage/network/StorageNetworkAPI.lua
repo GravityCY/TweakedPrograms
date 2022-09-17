@@ -50,6 +50,22 @@ local function get(addr)
   return inventoryList[addrsLookup[addr]];
 end
 
+local function isValidInv(addr)
+  local p = peripheral.wrap(addr);
+  return p ~= nil and p.list ~= nil;
+end
+
+local function batch()
+  local items = {};
+  local functions = {};
+  for index, inv in ipairs(inventoryList) do
+    functions[index] = function() items[index] = inv.periph.list(); end
+  end
+  parallel.waitForAll(table.unpack(functions));
+  return items;
+end
+
+
 -- Given a path will save all of it's data
 function sn.save(path)
   local file = fs.open(path.."data", "w");
@@ -69,12 +85,6 @@ function sn.load(path)
     sn.add(line);
   end
   file.close();
-end
-
-
-local function isValidInv(addr)
-  local p = peripheral.wrap(addr);
-  return p ~= nil and p.list ~= nil;
 end
 
 -- Adds an inventory to the network
@@ -114,29 +124,26 @@ function sn.pullItems(fromAddr, fromSlot, count, toSlot)
     for _, inv in ipairs(inventoryList) do
       local pull = inv.periph.pullItems(fromAddr, fromSlot, count - pulled);
       pulled = pulled + pull;
-      if (pull == count) then break end
+      if (pulled == count) then break end
     end
     return pulled;
   end
 end
 
-function sn.push(aTo, itemName, amount, toSlot)
-  local toAddr = getAddress(aTo);
-  local tPush = 0;
+function sn.push(toArg, itemName, amount, toSlot)
+  local toAddr = getAddress(toArg);
+  local pushed = 0;
 
-  for index, inventoryObj in ipairs(inventoryList) do
-    local inventory = inventoryObj.periph;
-    for fromSlot, item in pairs(inventory.list()) do
-      if (item.name == itemName) then
-        local push = inventory.pushItems(toAddr, fromSlot, amount - tPush, toSlot);
-        tPush = tPush + push;
-        if (tPush == amount) then break end
-      end
-      if (tPush == amount) then break end
+  for slot, item in pairs(sn.list()) do
+    if (item.name == itemName) then
+      local push = sn.pushItems(toAddr, slot, amount - pushed, toSlot);
+      pushed = pushed + push;
+      if (pushed == amount) then break end
     end
+    if (pushed == amount) then break end
   end
 
-  return tPush;
+  return pushed;
 end
 
 function sn.pull(aFrom, itemName, count, toSlot)
@@ -216,9 +223,11 @@ function sn.swap(slot1, slot2, items)
 end
 
 function sn.list()
+  local batchItemList = batch();
   local items = {};
-  for _, inv in ipairs(inventoryList) do
-    for slot, item in pairs(inv.periph.list()) do
+  for index, batchItems in ipairs(batchItemList) do
+    local inv = inventoryList[index];
+    for slot, item in pairs(batchItems) do
       items[inv.start + slot - 1] = item;
     end
   end

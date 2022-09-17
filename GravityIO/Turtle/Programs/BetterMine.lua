@@ -1,5 +1,5 @@
-local tUtils = require("TurtleUtils");
-local sides = tUtils.sides;
+local bt = require("BetterTurtle");
+local sides = bt.sides;
 
 local args = {...};
 
@@ -33,26 +33,26 @@ end
 local function turn(right)
   local side = sides.left;
   if (right) then side = sides.right end
-  tUtils.turn(side);
+  bt.turn(side);
 end
 
 local function home()
   local tx, tz = mx - 1, mz;
   if (not right) then tz = -tz; end
   if (isForward) then tx, tz = -tx, -tz; end
-  tUtils.goPos(tx, 0, tz);
+  bt.goPos(tx, 0, tz);
   if (mz == 0) then
     if (not isForward) then
-      tUtils.turn(sides.back);
+      bt.turn(sides.back);
     end
   else turn(right); end
-  tUtils.go(sides.back);
+  bt.go(sides.back);
 end
 
 local function moveMine()
-  tUtils.goDig(sides.forward);
-  tUtils.dig(sides.up);
-  tUtils.dig(sides.down);
+  bt.goDig(sides.forward);
+  bt.dig(sides.up);
+  bt.dig(sides.down);
 end
 
 local function corner()

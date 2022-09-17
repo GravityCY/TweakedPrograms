@@ -24,17 +24,20 @@ function t.isLocale(localeName)
   return locales[localeName] ~= nil;
 end
 
-function t.isKey(key)
-  return t.get(key) ~= nil;
-end
-
 function t.setLocale(localeName)
   if(not t.isLocale(localeName)) then return end
   current = localeName;
 end
 
+function t.isKey(key)
+  if (t.isLocale(current)) then
+    return locales[current][key];
+  end
+end
+
 function t.get(key)
-  return locales[current][key];
+  if (t.isLocale(current) and locales[current][key] ~= nil) then return locales[current][key]; end
+  return key;
 end
 
 function t.setSaveDirectory(saveDir)
