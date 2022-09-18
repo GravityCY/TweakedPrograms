@@ -72,18 +72,23 @@ local reqLookup = {};
 -- tagLookup["minecraft:dirt"] returns a total of dirt in the system
 local tagLookup = {};
 
-local function isFilterItem(type)
-  return filterLookup[type] ~= nil
+local toCrafterSlot = {1, 2, 3, 5, 6, 7, 9, 10, 11};
+
+local function getPeripheral()
+  local _, addr = os.pullEvent("peripheral");
+  sleep(0);
+  return addr;
 end
 
-local function getTotal(type)
-  return totalLookup[type] or 0;
-end
-
-local function getFilledSlots()
-  local x = 0
-  for _, _ in pairs(SNAPI.list()) do x = x + 1 end
-  return x
+local function pdui(current)
+  term.clear();
+  term.setCursorPos(1, 1);
+  print("------------ Peripheral Detection Mode ------------");
+  print("")
+  print("Will detect any Peripheral being enabled.");
+  print();
+  print("Enable a Modem by Right Clicking it while inactive");
+  print("Please Select: " .. current);
 end
 
 local function saveFilter()
@@ -126,6 +131,87 @@ local function loadFilter()
       end
     end
   end
+end
+
+local function setup()
+  if (not fs.exists(dataPath)) then
+    pdui("Input Inventory: ");
+    inputAddr = getPeripheral();
+    pdui("Red Router Activation Block: ");
+    redEnableAddr = getPeripheral();
+    pdui("Overflow Inventory\nJust Select 1 of the Inventories to Internally save the Type.");
+    overflowType = peripheral.getType(getPeripheral());
+    pdui("Interface Inventory\nJust Select 1 of the Inventories to Internally save the Type.");
+    interfaceType = peripheral.getType(getPeripheral());
+    pdui("Recipe Register Inventory: ");
+    recipeAddr = getPeripheral();
+    pdui("Storage Inventory\nJust Select 1 of the Inventories to Internally save the Type.");
+    storageType = peripheral.getType(getPeripheral());
+    pdui("Buffer Inventory: ");
+    bufferAddr = getPeripheral();
+    pdui("Crafter Turtle: ");
+    crafterAddr = getPeripheral();
+    pdui("Dumper Turtle: ");
+    dumperAddr = getPeripheral();
+
+    local f = fs.open(dataPath, "w");
+    f.writeLine(inputAddr);
+    f.writeLine(redEnableAddr);
+    f.writeLine(overflowType);
+    f.writeLine(interfaceType);
+    f.writeLine(recipeAddr);
+    f.writeLine(storageType);
+    f.writeLine(bufferAddr);
+    f.writeLine(crafterAddr);
+    f.writeLine(dumperAddr);
+    f.close();
+  else
+    local f = fs.open(dataPath, "r");
+    inputAddr = f.readLine();
+    redEnableAddr = f.readLine();
+    overflowType = f.readLine();
+    interfaceType = f.readLine();
+    recipeAddr = f.readLine();
+    storageType = f.readLine();
+    bufferAddr = f.readLine();
+    crafterAddr = f.readLine();
+    dumperAddr = f.readLine();
+    f.close();
+  end
+  inputPeriph = InvUtils.wrap(PerUtils.get(inputAddr));
+  recipePeriph = InvUtils.wrap(PerUtils.get(recipeAddr));
+  bufferPeriph = InvUtils.wrap(bufferAddr);
+  overflowList = PerUtils.getType(overflowType, true);
+  interfaceList = InvUtils.wrapList(PerUtils.blacklistSides(PerUtils.getType(interfaceType, true)));
+  storageList = PerUtils.getType(storageType, true);
+  enablePeriph = PerUtils.get(redEnableAddr);
+  modemPeriph = peripheral.find("modem", rednet.open);
+  crafterTurtle = PerUtils.get(crafterAddr);
+  dumperTurtle = PerUtils.get(dumperAddr);
+  monitor = peripheral.find("monitor");
+
+  for _, p in ipairs(storageList) do SNAPI.add(peripheral.getName(p)); end
+
+  monitor.setTextScale(0.5)
+  size = SNAPI.size();
+  mw, mh = monitor.getSize();
+
+  for _, barrel in ipairs(interfaceList) do invLookup[barrel.addr] = barrel; end
+  loadFilter();
+end
+
+local function isFilterItem(type)
+  return filterLookup[type] ~= nil
+end
+
+local function getTotal(type)
+  return totalLookup[type] or 0;
+end
+
+local function getFilledSlots()
+  local x = 0
+  for _, _ in pairs(SNAPI.list()) do x = x + 1 end
+  return x
 end
 
 local function toOverflow(fromAddr, slot, amount)
@@ -230,6 +316,7 @@ local function batch()
   parallel.waitForAll(table.unpack(functions))
   return items;
 end
+
 local function toIndex(addr)
 
   for index, interface in ipairs(interfaceList) do
@@ -310,8 +397,6 @@ local function renderMonitor()
   end
 end
 
-local toCrafterSlot = {1, 2, 3, 5, 6, 7, 9, 10, 11};
-
 -- Gets how much you'd need to craft
 local function getNeed(cost, usedLookup)
   usedLookup = usedLookup or {};
@@ -321,10 +406,6 @@ local function getNeed(cost, usedLookup)
     need[name] = math.max(count - total + (usedLookup[name] or 0), 0);
   end
   return need;
-end
-
-local function getNeedType(type, cost, used)
-  return math.max(cost - getTotal(type) + used, 0);
 end
 
 local function getResources(items)
@@ -353,7 +434,6 @@ end
 local function getCount(items)
   if (items[17] ~= nil) then return items[17].count; end
 end
-
 
 --#region
 -- Problems that need solving
@@ -430,10 +510,7 @@ local function craft(product, want, sub)
     local costLookup = CraftingAPI.total(recipe, times);
     local needLookup = getNeed(costLookup);
     for type, need in pairs(needLookup) do
-      if (need ~= 0) then
-        print("Need " .. need .. " " .. type);
-        craft(type, need, true);
-      end
+      if (need ~= 0) then craft(type, need, true); end
     end
     local smallest = 64;
     for type, _ in pairs(costLookup) do
@@ -442,11 +519,9 @@ local function craft(product, want, sub)
         smallest = common.maxCount;
       end
     end
-    print("Crafting " .. count .. " " .. product);
     local sent = 0;
     for x = 1, math.ceil(times / smallest) do
       for i, type in pairs(recipe.resources) do
-        print("Sending " .. type .. " at slot " .. i);
         push(crafterAddr, type, math.min(smallest, times - sent), toCrafterSlot[i]);
       end
       sent = sent + smallest;
@@ -457,53 +532,9 @@ local function craft(product, want, sub)
         pullItems(recipe.product, crafterAddr, i, 64);
       end
     end
-    print("Crafted " .. count .. " " .. product);
   else
-    print("not Enough");
   end
 end
-
--- local function craft(product, want, sub)
---   if (sub == nil) then sub = false; end
---   if (CraftingAPI.exists(product)) then
---     local recipe = CraftingAPI.get(product);
---     if (want == nil) then want = recipe.count; end
---     local times = math.ceil(want / recipe.count);
---     local count = times * recipe.count;
---     local costLookup = CraftingAPI.total(recipe, times);
---     local needLookup = getNeed(costLookup);
---     for type, need in pairs(needLookup) do
---       if (need ~= 0) then
---         print((Localization.get("craftNotEnough")):format(ItemUtils.format(type)));
---         if (CraftingAPI.exists(type)) then
---           print(Localization.get("craftHasSub"));
---           print(Localization.get("craftWithSub"));
---           if (not craft(type, need, true)) then return false; end
---         else return false; end
---       else
---         push(bufferAddr, type, costLookup[type]);
---       end
---     end
---     print((Localization.get("craftRecipe")):format(count, product));
---     for slot, type in pairs(recipe.resources) do
---       bufferPeriph.push(crafterTurtle.addr, type, times, toCrafterSlot[slot]);
---     end
---     rednet.broadcast(nil, "craft-start");
---     rednet.receive("craft-end");
---     for i = 1, 16 do
---       bufferPeriph.pullItems(crafterAddr, i, 64);
---     end
---     if (not sub) then
---       for slot, item in pairs(bufferPeriph.list()) do
---         pullItems(item.name, bufferAddr, slot, 64);
---       end
---     end
---     print((Localization.get("craftedRecipe"):format(count, product)));
---     return true;
---   else
---     print("No such Pattern.");
---   end
--- end
 
 local function craftCMD(a1, a2)
   if (a1 == "list") then
@@ -604,90 +635,6 @@ local function renderPC()
     if (#history >= 25) then table.remove(history, 1); end
     table.insert(history, userInStr);
   end
-end
-
-local function getPeripheral()
-  local _, addr = os.pullEvent("peripheral");
-  sleep(0);
-  return addr;
-end
-
-local function pdui(current)
-  term.clear();
-  term.setCursorPos(1, 1);
-  print("------------ Peripheral Detection Mode ------------");
-  print("")
-  print("Will detect any Peripheral being enabled.");
-  print();
-  print("Enable a Modem by Right Clicking it while inactive");
-  print("Please Select: " .. current);
-end
-
-local function setup()
-  if (not fs.exists(dataPath)) then
-    pdui("Input Inventory: ");
-    inputAddr = getPeripheral();
-    pdui("Red Router Activation Block: ");
-    redEnableAddr = getPeripheral();
-    pdui("Overflow Inventory\nJust Select 1 of the Inventories to Internally save the Type.");
-    overflowType = peripheral.getType(getPeripheral());
-    pdui("Interface Inventory\nJust Select 1 of the Inventories to Internally save the Type.");
-    interfaceType = peripheral.getType(getPeripheral());
-    pdui("Recipe Register Inventory: ");
-    recipeAddr = getPeripheral();
-    pdui("Storage Inventory\nJust Select 1 of the Inventories to Internally save the Type.");
-    storageType = peripheral.getType(getPeripheral());
-    pdui("Buffer Inventory: ");
-    bufferAddr = getPeripheral();
-    pdui("Crafter Turtle: ");
-    crafterAddr = getPeripheral();
-    pdui("Dumper Turtle: ");
-    dumperAddr = getPeripheral();
-
-    local f = fs.open(dataPath, "w");
-    f.writeLine(inputAddr);
-    f.writeLine(redEnableAddr);
-    f.writeLine(overflowType);
-    f.writeLine(interfaceType);
-    f.writeLine(recipeAddr);
-    f.writeLine(storageType);
-    f.writeLine(bufferAddr);
-    f.writeLine(crafterAddr);
-    f.writeLine(dumperAddr);
-    f.close();
-  else
-    local f = fs.open(dataPath, "r");
-    inputAddr = f.readLine();
-    redEnableAddr = f.readLine();
-    overflowType = f.readLine();
-    interfaceType = f.readLine();
-    recipeAddr = f.readLine();
-    storageType = f.readLine();
-    bufferAddr = f.readLine();
-    crafterAddr = f.readLine();
-    dumperAddr = f.readLine();
-    f.close();
-  end
-  inputPeriph = InvUtils.wrap(PerUtils.get(inputAddr));
-  recipePeriph = InvUtils.wrap(PerUtils.get(recipeAddr));
-  bufferPeriph = InvUtils.wrap(bufferAddr);
-  overflowList = PerUtils.getType(overflowType, true);
-  interfaceList = InvUtils.wrapList(PerUtils.blacklistSides(PerUtils.getType(interfaceType, true)));
-  storageList = PerUtils.getType(storageType, true);
-  enablePeriph = PerUtils.get(redEnableAddr);
-  modemPeriph = peripheral.find("modem", rednet.open);
-  crafterTurtle = PerUtils.get(crafterAddr);
-  dumperTurtle = PerUtils.get(dumperAddr);
-  monitor = peripheral.find("monitor");
-
-  for _, p in ipairs(storageList) do SNAPI.add(peripheral.getName(p)); end
-
-  monitor.setTextScale(0.5)
-  size = SNAPI.size();
-  mw, mh = monitor.getSize();
-
-  for _, barrel in ipairs(interfaceList) do invLookup[barrel.addr] = barrel; end
-  loadFilter();
 end
 
 setup();
