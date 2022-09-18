@@ -72,8 +72,6 @@ local reqLookup = {};
 -- tagLookup["minecraft:dirt"] returns a total of dirt in the system
 local tagLookup = {};
 
-local toCrafterSlot = {1, 2, 3, 5, 6, 7, 9, 10, 11};
-
 local function getPeripheral()
   local _, addr = os.pullEvent("peripheral");
   sleep(0);
@@ -195,6 +193,13 @@ local function setup()
   monitor.setTextScale(0.5)
   size = SNAPI.size();
   mw, mh = monitor.getSize();
+
+  function crafterTurtle.list()
+    rednet.broadcast(nil, "list");
+    print("Waiting for turtle items");
+    local _, message = rednet.receive("list");
+    return message;
+  end  
 
   for _, barrel in ipairs(interfaceList) do invLookup[barrel.addr] = barrel; end
   loadFilter();
@@ -397,6 +402,8 @@ local function renderMonitor()
   end
 end
 
+local toCrafterSlot = {1, 2, 3, 5, 6, 7, 9, 10, 11};
+
 -- Gets how much you'd need to craft
 local function getNeed(cost, usedLookup)
   usedLookup = usedLookup or {};
@@ -408,24 +415,16 @@ local function getNeed(cost, usedLookup)
   return need;
 end
 
+local toRegisterSlot = {4, 5, 6, 13, 14, 15, 22, 23, 24};
+
 local function getResources(items)
-  local temp = {};
   local resources = {};
-  temp[1] = items[4];
-  temp[2] = items[5];
-  temp[3] = items[6];
-  temp[4] = items[13];
-  temp[5] = items[14];
-  temp[6] = items[15];
-  temp[7] = items[22];
-  temp[8] = items[23];
-  temp[9] = items[24];
   for i = 1, 9 do
-    local item = temp[i];
+    local item = items[toRegisterSlot[i]];
     if (item ~= nil) then resources[i] = item.name; end
   end
   return resources;
-end 
+end
 
 local function getProduct(items)
   if (items[17] ~= nil) then return items[17].name; end
@@ -477,24 +476,18 @@ end
 
 local function isEnough(recipe, times, parentUsed)
   parentUsed = parentUsed or {};
-  print("Checking if enough for " .. recipe.product);
   local costLookup = CraftingAPI.total(recipe, times);
-  print(parentUsed["minecraft:oak_log"])
   local needLookup = getNeed(costLookup, parentUsed);
-  print(needLookup["minecraft:oak_log"])
   for type, need in pairs(needLookup) do
     parentUsed[type] = (parentUsed[type] or 0) + need;
   end
   for type, need in pairs(needLookup) do
     if (need ~= 0) then
       local sub = CraftingAPI.get(type);
-      print("need " .. need .. " " .. type);
       if (sub ~= nil) then
-        if (not isEnough(sub, math.max(need / sub.count), parentUsed)) then return false;
-        else print(type .. " is enough"); end
+        if (not isEnough(sub, math.max(need / sub.count), parentUsed)) then return false; end
       else return false; end
     else
-      print("have enough " .. type);
     end
   end
   return true
@@ -509,8 +502,16 @@ local function craft(product, want, sub)
     local count = recipe.count * times;
     local costLookup = CraftingAPI.total(recipe, times);
     local needLookup = getNeed(costLookup);
+    if (not sub) then
+      print(("Crafting %d %s"):format(count, product))
+    else
+      print(("Crafting %d %s for parent recipe."):format(count, product))
+    end
     for type, need in pairs(needLookup) do
-      if (need ~= 0) then craft(type, need, true); end
+      if (need ~= 0) then 
+        print(("Need %d %s"):format(need, type));
+        craft(type, need, true);
+      end
     end
     local smallest = 64;
     for type, _ in pairs(costLookup) do
@@ -526,10 +527,10 @@ local function craft(product, want, sub)
       end
       sent = sent + smallest;
       rednet.broadcast(nil, "craft-start");
+      print("Waiting for craft to end");
       rednet.receive("craft-end");
-      for i = 1, 16 do
-        print("Pulling  from " .. i);
-        pullItems(recipe.product, crafterAddr, i, 64);
+      for slot, item in pairs(crafterTurtle.list()) do
+        pullItems(recipe.product, crafterAddr, slot, 64);
       end
     end
   else
@@ -557,15 +558,13 @@ local function craftCMD(a1, a2)
       local product = getProduct(items);
       local count = getCount(items);
       CraftingAPI.add(CraftingAPI.Recipe(resources, product, count));
-      pullItems(resources[1], recipeAddr, 4, 64);
-      pullItems(resources[2], recipeAddr, 5, 64);
-      pullItems(resources[3], recipeAddr, 6, 64);
-      pullItems(resources[4], recipeAddr, 13, 64);
-      pullItems(resources[5], recipeAddr, 14, 64);
-      pullItems(resources[6], recipeAddr, 15, 64);
-      pullItems(resources[7], recipeAddr, 22, 64);
-      pullItems(resources[8], recipeAddr, 23, 64);
-      pullItems(resources[9], recipeAddr, 24, 64);
+      for i = 1, 9 do
+        local slot = toRegisterSlot[i];
+        local item = items[slot];
+        if (item ~= nil) then
+          pullItems(resources[i], recipeAddr, slot, 64);
+        end
+      end
       pullItems(product, recipeAddr, 17, 64);
     else
       local want = nil;
@@ -597,8 +596,10 @@ local function renderPC()
     local userInStr = read(nil, history);
     local userIn = TableUtils.toTable(userInStr, " ");
     local cmd = userIn[1];
-    if (cmd == "craft") then craftCMD(userIn[2], userIn[3]);
-    elseif (cmd == "list") then listCMD(userIn[2]);
+    if (cmd == "craft") then
+      craftCMD(userIn[2], userIn[3]);
+    elseif (cmd == "list") then
+      listCMD(userIn[2]);
     elseif (cmd == "clean") then
       for slot, item in pairs(SNAPI.list()) do
         if (not isFilterItem(item.name)) then
