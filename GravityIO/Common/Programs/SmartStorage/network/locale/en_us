@@ -28,7 +28,7 @@ pDetect2 Enable a Modem by Right Clicking it while inactive
 pSelect Please Select: %s
 
 fillPercentText Storage Fill Percent:
-fillPercentNum %f.2f%%
+fillPercentNum %.2f%%
 freeSlotsText Free Slots:
 freeSlotsNum %d
 itemsStored Items Stored:
