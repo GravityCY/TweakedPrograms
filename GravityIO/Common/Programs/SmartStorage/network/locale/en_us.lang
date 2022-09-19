@@ -1,0 +1,35 @@
+inAddr Enter Input Address: 
+recAddr Enter Recipe Register Address: 
+bufAddr Enter Buffer Address: 
+overType Enter Overflow Type: 
+interType Enter Interface Type: 
+
+craftNew1 Add the recipe into the Recipe Register.
+craftNew2 Press Enter when Done.
+craftDelNoRecipe No such Crafting recipe.
+craftDelRecipe Deleted %s.
+craftNotEnoughToCraft Don't have enough to craft %d %s
+craftNeedMore Need %d more %s
+craftNotSubrecipe %s is not a Subrecipe, need %d more.
+craftRecipe Crafting %d %s
+craftSubrecipe Crafting %d %s for parent.
+craftedRecipe Crafted %d %s
+craftListItem %s
+
+pause Pausing...
+unpause Unpausing...
+
+exit Goodbye...
+listItem %d %s
+
+pDetectMode Peripheral Detection Mode
+pDetect1 Will detect any Peripheral being enabled.
+pDetect2 Enable a Modem by Right Clicking it while inactive
+pSelect Please Select: %s
+
+fillPercentText Storage Fill Percent:
+fillPercentNum %f.2f%%
+freeSlotsText Free Slots:
+freeSlotsNum %d
+itemsStored Items Stored:
+monitorItemLine %d %s

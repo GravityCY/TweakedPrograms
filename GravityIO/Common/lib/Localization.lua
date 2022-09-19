@@ -12,9 +12,11 @@ local function load()
     while true do
       local line = f.readLine();
       if (line == nil) then break end
-      local key = line:match("%S+");
-      local value = line:match("%s(.+)");
-      locale[key] = value;
+      if (line ~= "") then
+        local key = line:match("%S+");
+        local value = line:match("%s(.+)");
+        locale[key] = value;
+      end
     end
     locales[localeName] = locale;
   end

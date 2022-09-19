@@ -79,12 +79,12 @@ end
 local function pdui(current)
   term.clear();
   term.setCursorPos(1, 1);
-  print("------------ Peripheral Detection Mode ------------");
-  print("")
-  print("Will detect any Peripheral being enabled.");
+  print(Localization.get("pDetectMode"));
+  print()
+  print(Localization.get("pDetect1"));
   print();
-  print("Enable a Modem by Right Clicking it while inactive");
-  print("Please Select: " .. current);
+  print(Localization.get("pDetect2"));
+  print(Localization.get("pSelect"):format(current));
 end
 
 local function saveFilter()
@@ -292,7 +292,7 @@ local function printItems()
     if item.count > 64 then
       if height ~= mh then
         monitor.setCursorPos(x, height);
-        printMonitor(item.count .." ".. ItemUtils.format(item.name));
+        printMonitor(Localization.get("monitorItemLine"):format(item.count, ItemUtils.format(item.name)));
       else
         if (column == 2) then break end
         column = column + 1;
@@ -382,11 +382,11 @@ local function renderMonitor()
       centColor = colors.red;
       slotColor = colors.green;
     end
-    printMonitor("Storage Fill Percent:")
-    printMonitor(string.format("%.2f%%", newFilledSlots / size * 100), centColor);
-    printMonitor("Free Slots:");
-    printMonitor(size - newFilledSlots, slotColor);
-    printMonitor("Items Stored:");
+    printMonitor(Localization.get("fillPercentText"));
+    printMonitor(Localization.get("fillPercentNum"):format(newFilledSlots / size * 100), centColor);
+    printMonitor(Localization.get("freeSlotsText"));
+    printMonitor(Localization.get("freeSlotsNum"):format(size - newFilledSlots), slotColor);
+    printMonitor(Localization.get("itemsStored"));
     printItems();
     filledSlots = newFilledSlots;
     sleep(renderSleep);
@@ -474,14 +474,14 @@ local function isEnough(recipe, times, parentUsed)
   for type, need in pairs(needLookup) do
     if (need ~= 0) then
       local sub = CraftingAPI.get(type);
-      print(("Need %d more %s"):format(need, type));
+      print(Localization.get("craftNeedMore"):format(need, type));
       if (sub ~= nil) then
         if (not isEnough(sub, math.ceil(need / sub.count), parentUsed)) then
-          print(("Don't have enough to craft %d %s"):format(need, type));
+          print(Localization.get("craftNotEnoughToCraft"):format(need, type));
           return false;
         end
       else
-        print(("%s is not a subrecipe"):format(type));
+        print((Localization.get("craftNotSubrecipe")):format(type, need));
         return false;
       end
     else
@@ -505,13 +505,12 @@ local function craft(product, want, usedLookup)
       usedLookup[type] = (usedLookup[type] or 0) + need;
     end
     if (sub == nil) then
-      print(("Crafting %d %s"):format(count, product))
+      print(Localization.get("craftRecipe"):format(count, product))
     else
-      print(("Crafting %d %s for parent recipe."):format(count, product))
+      print(Localization.get("craftSubrecipe"):format(count, product))
     end
     for type, need in pairs(needLookup) do
       if (need ~= 0) then
-        print(("Need %d %s"):format(need, type));
         craft(type, need, usedLookup);
       end
     end
@@ -544,13 +543,13 @@ local function craftCMD(a1, a2)
     for _, recipe in ipairs(CraftingAPI.list()) do
       if (filterType ~= nil) then
         if (recipe.product:find(filterType)) then
-          print(recipe.product);
+          print(Localization.get("craftListItem"):format(recipe.product));
         end
-      else print(recipe.product); end
+      else print(Localization.get("craftListItem"):format(recipe.product)); end
     end
     elseif (a1 == "new") then
-      print("Add the recipe into the Recipe Register.");
-      print("Press Enter when Done");
+      print(Localization.get("craftNew1"));
+      print(Localization.get("craftNew2"));
       read();
       local items = recipePeriph.list();
       local resources = getResources(items);
@@ -572,11 +571,11 @@ local function craftCMD(a1, a2)
         name = read();
       end
       if (not CraftingAPI.exists(name)) then
-        print("No such Crafting Recipe.");
+        print(Localization.get("craftDelNoRecipe"));
         return
       end
       CraftingAPI.remove(name);
-      print("Removed " .. name);
+      print(Localization.get("craftDelRecipe"):format(name));
     else
       local want = nil;
       if (a2 ~= nil) then want = tonumber(a2) end
@@ -590,10 +589,10 @@ local function listCMD(filterType)
   for type, count in pairs(totalLookup) do
     if (filterType ~= nil) then
       if (type:find(filterType)) then
-        print(("%d %s"):format(count, type))
+        print(Localization.get("listItem"):format(count, type))
       end
     else
-      print(("%d %s"):format(count, type));
+      print(Localization.get("listItem"):format(count, type));
     end
   end
 end
@@ -612,14 +611,14 @@ local function clearCMD()
 end
 
 local function exitCMD()
-  print("Goodbye...");
+  print(Localization.get("exit"));
   error();
 end
 
 local function pauseCMD()
   isPaused = not isPaused;
-  if (isPaused) then print("Pausing...");
-  else print("Unpausing..."); end
+  if (isPaused) then print(Localization.get("pause"));
+  else print(Localization.get("unpause")); end
 end
 
 local function filterCMD()
