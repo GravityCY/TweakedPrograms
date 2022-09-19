@@ -1,5 +1,6 @@
 -- TODO:
--- Auto Crafting
+-- Auto Crafting DONE
+-- Auto Crafting needs to ignore if you have enough resources and just try anyways
 -- Custom Auto Crafting using Exporters
 -- Importers / Exporters
 -- Shulker Loader, Load Specific Items into Shulkers with specific Display Names.
