@@ -150,38 +150,34 @@ function sn.pull(aFrom, itemName, count, toSlot)
   local fromInventory = getPeripheral(aFrom);
   local fromAddr = getAddress(aFrom);
 
-  local tPull = 0;
+  local pulled = 0;
   for fromSlot, item in pairs(fromInventory.list()) do
     if (item.name == itemName) then
       for index = #inventoryList, 1, -1 do
         local toInventory = inventoryList[index];
-        local pull = toInventory.periph.pullItems(fromAddr, fromSlot, count - tPull, toSlot);
-        tPull = tPull + pull;
-        if (tPull == count) then break end
+        local pull = toInventory.periph.pullItems(fromAddr, fromSlot, count - pulled, toSlot);
+        pulled = pulled + pull;
+        if (pulled == count) then break end
       end
     end
-    if (tPull == count) then break end
+    if (pulled == count) then break end
   end
-  return tPull;
+  return pulled;
 end
 
-function sn.pullAll(aFrom, itemName)
+function sn.pullAll(aFrom, type)
   local fromInventory = getPeripheral(aFrom);
   local fromAddr = getAddress(aFrom);
 
   local tPull = 0;
   for slot, item in pairs(fromInventory.list()) do
-    if (itemName == nil or itemName == item.name) then
+    if (type == nil or type == item.name) then
       local pulled = 0;
       for i = #inventoryList, 1, -1 do
         local toInventory = inventoryList[i];
         local pull = toInventory.periph.pullItems(fromAddr, slot, 64);
         pulled = pulled + pull;
         tPull = tPull + pull;
-        -- for putSlot, nAmount in pairs(where) do
-        --   local nItem = Item.new(item.name, nAmount);
-        --   sn.items[toGlobalSlot(putSlot, i)] = nItem;
-        -- end
         if (pulled == item.count) then break end
       end
     end
