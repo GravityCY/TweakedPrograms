@@ -1,4 +1,15 @@
-local NetUtils = require("NetUtils");
+local NetUtils = {};
+
+function NetUtils.saveDownload(url, savePath)
+  local resfile = http.get(url);
+  if (resfile == nil) then return false end
+  local data = resfile.readAll();
+  local saveFile = fs.open(savePath, "w");
+  saveFile.write(data);
+  saveFile.close();
+  resfile.close();
+  return true;
+end
 
 NetUtils.saveDownload("https://raw.githubusercontent.com/GravityCY/cc-t/master/GravityIO/Common/Programs/SmartStorage/network/SmartStorage.lua", "SmartStorage.lua")
 NetUtils.saveDownload("https://raw.githubusercontent.com/GravityCY/cc-t/master/GravityIO/Common/Programs/SmartStorage/network/StorageNetworkAPI.lua", "StorageNetworkAPI.lua")
