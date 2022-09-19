@@ -1,8 +1,13 @@
 -- TODO:
 -- Auto Crafting DONE
--- Auto Crafting needs to ignore if you have enough resources and just try anyways
+--  Auto Crafting needs to ignore if you have enough resources and just try anyways
+-- 
+-- Make it so that program doesn't have to use only the storage inventories for storage and connect everything kind of.
+-- 
 -- Custom Auto Crafting using Exporters
+-- 
 -- Importers / Exporters
+-- 
 -- Shulker Loader, Load Specific Items into Shulkers with specific Display Names.
 -- 
 --  Example "Redstone" Named Shulker will be filled with redstone specified items.
@@ -380,13 +385,12 @@ local function batch()
 end
 
 local function toIndex(addr)
-
   for index, interface in ipairs(interfaceList) do
     if (interface.addr == addr) then return index; end
   end
 end
 
--- Gets how much you'd need to craft
+-- Gets how much you'd need to craft in comparison to how much in storage
 local function getNeed(cost, usedLookup)
   usedLookup = usedLookup or {};
   local need = {};
