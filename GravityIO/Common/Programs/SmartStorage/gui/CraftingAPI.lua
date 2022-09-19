@@ -1,37 +1,30 @@
+local ItemUtils = require("ItemUtils");
+
 local t = {};
 t.saveDirectory = "/data/craftingapi/recipes/";
 
 local recipeLookup = {};
 
-local function replaceIndex(str, pos, rep)
-  return str:sub(1, pos-1) .. rep .. str:sub(pos+1);
-end
-
-local function toPath(name)
-  return replaceIndex(name, name:find(":"), "_");
-end
-
-local function fromPath(path)
-  return replaceIndex(path, path:find("_"), ":");
-end
-
 local function load()
   if (not fs.exists(t.saveDirectory)) then return end
-  for _, path in ipairs(fs.list(t.saveDirectory)) do
-    local f = fs.open(t.saveDirectory..path, "r");
-    local resources = {};
-    local product = fromPath(path);
-    local count = 0;
-    while true do
-      local line = f.readLine();
-      if (line == "end") then break end
-      local slot = tonumber(line);
-      local resource = f.readLine();
-      resources[slot] = resource;
+  for _, namespace in ipairs(fs.list(t.saveDirectory)) do
+    local namespaceDir = t.saveDirectory .. namespace .. "/";
+    for _, item in ipairs(fs.list(namespaceDir)) do
+      local f = fs.open(namespaceDir..item, "r");
+      local resources = {};
+      local product = namespace .. ":" .. item;
+      local count = 0;
+      while true do
+        local line = f.readLine();
+        if (line == "end") then break end
+        local slot = tonumber(line);
+        local resource = f.readLine();
+        resources[slot] = resource;
+      end
+      count = tonumber(f.readLine());
+      f.close();
+      t.add(t.Recipe(resources, product, count));
     end
-    count = tonumber(f.readLine());
-    f.close();
-    t.add(t.Recipe(resources, product, count));
   end
 end
 
@@ -54,7 +47,7 @@ function t.save()
 end
 
 function t.saveRecipe(recipe)
-  local f = fs.open(t.saveDirectory..toPath(recipe.product), "w");
+  local f = fs.open(t.saveDirectory .. ItemUtils.namespace(recipe.product) .. "/" .. ItemUtils.type(recipe.product), "w");
     for slot, resource in pairs(recipe.resources) do
       f.write(slot .. "\n");
       f.write(resource .. "\n");

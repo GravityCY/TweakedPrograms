@@ -76,7 +76,7 @@ end
 
 function t.remove(product)
   recipeLookup[product] = nil;
-  local path = t.saveDirectory..toPath(product);
+  local path = t.saveDirectory..ItemUtils.namespace(product) .. "/".. ItemUtils.type(product);
   if (fs.exists(path)) then fs.delete(path); end
 end
 

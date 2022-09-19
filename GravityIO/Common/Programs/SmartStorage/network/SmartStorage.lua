@@ -36,7 +36,6 @@ local recipeAddr = nil;
 local overflowType = nil;
 local interfaceType = nil;
 local storageType = nil;
-local bufferAddr = nil;
 local crafterAddr = nil;
 local dumperAddr = nil;
 
@@ -44,7 +43,6 @@ local dumperAddr = nil;
 local monitor = nil;
 local inputPeriph = nil;
 local recipePeriph = nil;
-local bufferPeriph = nil;
 local overflowList = nil;
 local interfaceList =nil;
 local storageList = nil;
@@ -145,8 +143,6 @@ local function setup()
     recipeAddr = getPeripheral();
     pdui("Storage Inventory\nJust Select 1 of the Inventories to Internally save the Type.");
     storageType = peripheral.getType(getPeripheral());
-    pdui("Buffer Inventory: ");
-    bufferAddr = getPeripheral();
     pdui("Crafter Turtle: ");
     crafterAddr = getPeripheral();
     pdui("Dumper Turtle: ");
@@ -159,7 +155,6 @@ local function setup()
     f.writeLine(interfaceType);
     f.writeLine(recipeAddr);
     f.writeLine(storageType);
-    f.writeLine(bufferAddr);
     f.writeLine(crafterAddr);
     f.writeLine(dumperAddr);
     f.close();
@@ -171,14 +166,12 @@ local function setup()
     interfaceType = f.readLine();
     recipeAddr = f.readLine();
     storageType = f.readLine();
-    bufferAddr = f.readLine();
     crafterAddr = f.readLine();
     dumperAddr = f.readLine();
     f.close();
   end
   inputPeriph = InvUtils.wrap(PerUtils.get(inputAddr));
   recipePeriph = InvUtils.wrap(PerUtils.get(recipeAddr));
-  bufferPeriph = InvUtils.wrap(bufferAddr);
   overflowList = PerUtils.getType(overflowType, true);
   interfaceList = InvUtils.wrapList(PerUtils.blacklistSides(PerUtils.getType(interfaceType, true)));
   storageList = PerUtils.getType(storageType, true);
@@ -195,11 +188,11 @@ local function setup()
   mw, mh = monitor.getSize();
 
   function crafterTurtle.list()
-    rednet.broadcast(nil, "list");
-    print("Waiting for turtle items");
-    local _, message = rednet.receive("list");
+    rednet.send(22, nil, "list-start");
+    local _, message = rednet.receive("list-end");
     return message;
-  end  
+
+  end
 
   for _, barrel in ipairs(interfaceList) do invLookup[barrel.addr] = barrel; end
   loadFilter();
@@ -255,10 +248,8 @@ local function pull(addr, type, amount, toSlot)
 end
 
 local function pullItems(type, addr, fromSlot, amount)
-  if (isFilterItem(type)) then
-    local pulled = SNAPI.pullItems(addr, fromSlot, amount);
-    addTotal(type, pulled);
-  else toOverflow(addr, fromSlot, amount); end
+  local pulled = SNAPI.pullItems(addr, fromSlot, amount);
+  addTotal(type, pulled);
 end
 
 local function pushItems(type, addr, slot, amount)
@@ -451,18 +442,17 @@ end
     -- And I think any subrecipes of subrecipes that would SOMEHOW need planks will need to know the top parent will still need 6 planks cause I think it's possible
     -- to somehow make it think that there is enough in storage if you ONLY give it the immediate parents needs 
     -- so basically merge the tables from recipe to subrecipe to subrecipe etc.
-    -- OR send all required items into a buffer inventory
 
   -- Sending Recipes that need items higher than the items stack sizes is problematic
     -- Let's say you need 512 Oak Planks, you will need 128 logs to be crafted, logs have a stack size of 64
     -- You will need to send 64 logs to the turtles slot twice
-    -- Kinda like > for i = 1, 128 / 64 do 
+    -- Kinda like for i = 1, 128 / 64 do 
     -- But for cases that have variable stack sizes like 1 item stack size is 16 and the other is 64
     -- You'd need to work based off of the lowest stack size
     -- An Eye of Ender for Example; if you want 32 eyes of ender
     -- The blaze powder stack size is 64, the ender pearl stack size is 16
-    -- You'd need to send 32 blaze powder since that's less than it's stack size
-    -- Then 16 Ender Pearls, craft once.
+    -- You'd need to send 16 blaze powder since that's less than it's stack size
+    -- Then 16 Ender Pearls, and 16 blaze powder and craft once.
     -- Then again 16 ender pearls, craft once again.
     -- How the fuck do you implements all this shit
 
@@ -484,33 +474,45 @@ local function isEnough(recipe, times, parentUsed)
   for type, need in pairs(needLookup) do
     if (need ~= 0) then
       local sub = CraftingAPI.get(type);
+      print(("Need %d more %s"):format(need, type));
       if (sub ~= nil) then
-        if (not isEnough(sub, math.max(need / sub.count), parentUsed)) then return false; end
-      else return false; end
+        if (not isEnough(sub, math.ceil(need / sub.count), parentUsed)) then
+          print(("Don't have enough to craft %d %s"):format(need, type));
+          return false;
+        end
+      else
+        print(("%s is not a subrecipe"):format(type));
+        return false;
+      end
     else
     end
   end
   return true
 end
 
-local function craft(product, want, sub)
+local function craft(product, want, usedLookup)
+  local sub = usedLookup ~= nil;
+  usedLookup = usedLookup or {};
   local recipe = CraftingAPI.get(product);
   if (recipe == nil) then return end
   want = want or recipe.count;
-  local times = math.max(want / recipe.count);
+  local times = math.ceil(want / recipe.count);
   if (sub or isEnough(recipe, times)) then
     local count = recipe.count * times;
     local costLookup = CraftingAPI.total(recipe, times);
-    local needLookup = getNeed(costLookup);
-    if (not sub) then
+    local needLookup = getNeed(costLookup, usedLookup);
+    for type, need in pairs(needLookup) do
+      usedLookup[type] = (usedLookup[type] or 0) + need;
+    end
+    if (sub == nil) then
       print(("Crafting %d %s"):format(count, product))
     else
       print(("Crafting %d %s for parent recipe."):format(count, product))
     end
     for type, need in pairs(needLookup) do
-      if (need ~= 0) then 
+      if (need ~= 0) then
         print(("Need %d %s"):format(need, type));
-        craft(type, need, true);
+        craft(type, need, usedLookup);
       end
     end
     local smallest = 64;
@@ -526,33 +528,30 @@ local function craft(product, want, sub)
         push(crafterAddr, type, math.min(smallest, times - sent), toCrafterSlot[i]);
       end
       sent = sent + smallest;
-      rednet.broadcast(nil, "craft-start");
-      print("Waiting for craft to end");
+      rednet.send(22, nil, "craft-start");
       rednet.receive("craft-end");
-      for slot, item in pairs(crafterTurtle.list()) do
+      local turtleItems = crafterTurtle.list();
+      for slot, item in pairs(turtleItems) do
         pullItems(recipe.product, crafterAddr, slot, 64);
       end
     end
-  else
   end
 end
 
 local function craftCMD(a1, a2)
   if (a1 == "list") then
+    local filterType = a2;
     for _, recipe in ipairs(CraftingAPI.list()) do
-      if (a2 ~= nil) then
-        if (recipe.product:find(a2)) then
+      if (filterType ~= nil) then
+        if (recipe.product:find(filterType)) then
           print(recipe.product);
         end
       else print(recipe.product); end
     end
     elseif (a1 == "new") then
-      print("When Ready, Add the Pattern into the Pattern Register");
-      sleep(0.2);
-      while true do
-        local _, key = os.pullEvent("key_up");
-        if (key == keys.enter) then break end
-      end
+      print("Add the recipe into the Recipe Register.");
+      print("Press Enter when Done");
+      read();
       local items = recipePeriph.list();
       local resources = getResources(items);
       local product = getProduct(items);
@@ -566,6 +565,18 @@ local function craftCMD(a1, a2)
         end
       end
       pullItems(product, recipeAddr, 17, 64);
+    elseif (a1 == "del") then
+      local name = a2;
+      if (name == nil) then
+        write("Enter Name: ");
+        name = read();
+      end
+      if (not CraftingAPI.exists(name)) then
+        print("No such Crafting Recipe.");
+        return
+      end
+      CraftingAPI.remove(name);
+      print("Removed " .. name);
     else
       local want = nil;
       if (a2 ~= nil) then want = tonumber(a2) end
@@ -575,15 +586,63 @@ local function craftCMD(a1, a2)
     end
 end
 
-local function listCMD(a1)
+local function listCMD(filterType)
   for type, count in pairs(totalLookup) do
-    if (a1 ~= nil) then
-      if (type:find(a1)) then
+    if (filterType ~= nil) then
+      if (type:find(filterType)) then
         print(("%d %s"):format(count, type))
       end
     else
       print(("%d %s"):format(count, type));
     end
+  end
+end
+
+local function cleanCMD()
+  for slot, item in pairs(SNAPI.list()) do
+    if (not isFilterItem(item.name)) then
+      toOverflow("snapi", slot, 64);
+    end
+  end
+end
+
+local function clearCMD()
+  term.clear();
+  term.setCursorPos(1, 1);
+end
+
+local function exitCMD()
+  print("Goodbye...");
+  error();
+end
+
+local function pauseCMD()
+  isPaused = not isPaused;
+  if (isPaused) then print("Pausing...");
+  else print("Unpausing..."); end
+end
+
+local function filterCMD()
+  saveFilter();
+  loadFilter();
+end
+
+local function dumpCMD(name, amount)
+  if (name == nil) then
+    write("Enter Item Name: ")
+    name = read();
+  end
+  if (amount == nil) then
+    write("Enter Amount: ");
+    amount = tonumber(read());
+  end
+  write("If " .. name .. " is over " .. amount .. " then dump it into lava? Y/N: ");
+  local confirm = read():lower();
+  while true do
+    if (confirm == "y") then
+      reqLookup[name] = amount;
+      break
+    elseif (confirm == "n") then break end
   end
 end
 
@@ -596,43 +655,14 @@ local function renderPC()
     local userInStr = read(nil, history);
     local userIn = TableUtils.toTable(userInStr, " ");
     local cmd = userIn[1];
-    if (cmd == "craft") then
-      craftCMD(userIn[2], userIn[3]);
-    elseif (cmd == "list") then
-      listCMD(userIn[2]);
-    elseif (cmd == "clean") then
-      for slot, item in pairs(SNAPI.list()) do
-        if (not isFilterItem(item.name)) then
-          toOverflow("snapi", slot, 64);
-        end
-      end
-    elseif (cmd == "clear") then
-      term.clear();
-      term.setCursorPos(1, 1);
-    elseif (cmd == "exit") then
-      print("Goodbye...");
-      error();
-    elseif (cmd == "pause") then
-      isPaused = not isPaused;
-      if (isPaused) then print("Pausing...");
-      else print("Unpausing..."); end
-    elseif (cmd == "filter") then
-      saveFilter();
-      loadFilter();
-    elseif (cmd == "dump") then
-      write("Enter Item Name: ")
-      local itemName = read();
-      write("Enter Amount: ");
-      local itemAmount = tonumber(read());
-      write("If " .. itemName .. " is over " .. itemAmount .. " then dump it into lava? Y/N: ");
-      local confirm = read():lower();
-      while true do
-        if (confirm == "y") then
-          reqLookup[itemName] = itemAmount;
-          break
-        elseif (confirm == "n") then break end
-      end
-    end
+    if (cmd == "craft") then craftCMD(userIn[2], userIn[3]);
+    elseif (cmd == "list") then listCMD(userIn[2]);
+    elseif (cmd == "clean") then cleanCMD();
+    elseif (cmd == "clear") then clearCMD();
+    elseif (cmd == "exit") then exitCMD();
+    elseif (cmd == "pause") then pauseCMD();
+    elseif (cmd == "filter") then filterCMD();
+    elseif (cmd == "dump") then dumpCMD(); end
     if (#history >= 25) then table.remove(history, 1); end
     table.insert(history, userInStr);
   end
