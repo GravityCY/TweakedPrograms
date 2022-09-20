@@ -78,6 +78,7 @@ local dumpLookup = {};
 -- A string indexed lookup table of item types and how much to auto craft to keep a steady amount in storage.
 -- autoLookup["minecraft:oak_planks"] returns 64 meaning that planks will always try to be autocrafted upto 64
 local autoLookup = {};
+local emptyList = {};
 -- A string indexed lookup table of item tags and their total amount in the storage
 -- tagLookup["minecraft:planks"] returns a total of planks in the system
 local tagLookup = {};
@@ -615,9 +616,18 @@ end
 local function doStore()
   for slot, item in pairs(inputPeriph.list()) do
     if (isFilterItem(item.name)) then
-      pullItems(item.name, inputAddr, slot, 64);
-    else toOverflow(inputAddr, slot, 64); end
+      pullItems(item.name, inputAddr, slot, item.count);
+    else toOverflow(inputAddr, slot, item.count); end
   end
+  if (#emptyList == 0) then return end
+  for _, inv in ipairs(emptyList) do
+    for slot, item in pairs(inv.list()) do
+      if (isFilterItem(item.name)) then
+        pullItems(item.name, inv.addr, slot, item.count);
+      else toOverflow(inv.addr, slot, item.count); end
+    end
+  end
+  emptyList = {};
 end
 
 local function doRestock()
@@ -816,25 +826,29 @@ local function dumpCMD(a1, a2)
     if (name == nil) then
       write("Enter Name: ");
       name = read();
-      if (dumpLookup[name] == nil) then
-        print("No such Item.");
-        return
-      end
-      removeDump(name);
-      print("Removed " .. name .. ".");
     end
+    if (dumpLookup[name] == nil) then
+      print("No such Item.");
+      return
+    end
+    removeDump(name);
+    print("Removed " .. name .. ".");
   else
     local name = a1;
-    local count = a2;
+    local countStr = a2;
     if (name == nil) then
       write("Enter Item Name: ")
       name = read();
     end
-    if (count == nil) then
+    if (countStr == nil) then
       write("Enter Amount: ");
-      count = read();
+      countStr = read();
     end
-    count = tonumber(count);
+    local count = tonumber(countStr);
+    if (count == nil) then
+      print(countStr .. " is not a number...");
+      return
+    end
     write("If " .. name .. " is over " .. count .. " then dump it into lava? Y/N: ");
     local confirm = read():lower();
     while true do
@@ -866,6 +880,13 @@ local function renderPC()
   end
 end
 
+local function onAttach()
+  while true do
+    local _, addr = os.pullEvent("peripheral");
+    table.insert(emptyList, PerUtils.get(addr));
+  end
+end
+
 setup();
-parallel.waitForAll(tasks, renderMonitor, renderPC)
+parallel.waitForAll(tasks, renderMonitor, renderPC, onAttach);
 
