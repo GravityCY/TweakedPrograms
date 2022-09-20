@@ -20,6 +20,8 @@ local CraftingAPI = require("CraftingAPI");
 local Localization = require("Localization");
 local SNAPI = require("StorageNetworkAPI");
 
+local crafterId = 22;
+
 local mainDirectory = "/data/smart_storage/";
 local dataPath = mainDirectory .. "data";
 local dumpData = mainDirectory .. "dumpData";
@@ -313,7 +315,7 @@ local function setup()
 
   for _, p in ipairs(storageList) do SNAPI.add(peripheral.getName(p)); end
   function crafterTurtle.list()
-    rednet.send(22, nil, "list-start");
+    rednet.send(crafterId, nil, "list-start");
     local _, message = rednet.receive("list-end");
     return message;
   end
@@ -604,7 +606,7 @@ local function craft(product, want, usedLookup)
         push(crafterAddr, type, math.min(smallest, times - sent), toCrafterSlot[i]);
       end
       sent = sent + smallest;
-      rednet.send(22, nil, "craft-start");
+      rednet.send(crafterId, nil, "craft-start");
       rednet.receive("craft-end");
       for slot, item in pairs(crafterTurtle.list()) do
         pullItems(item.name, crafterAddr, slot, 64);
