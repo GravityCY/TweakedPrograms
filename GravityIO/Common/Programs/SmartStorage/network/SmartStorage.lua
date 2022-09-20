@@ -23,6 +23,7 @@ local SNAPI = require("StorageNetworkAPI");
 local mainDirectory = "/data/smart_storage/";
 local dataPath = mainDirectory .. "data";
 local dumpData = mainDirectory .. "dumpData";
+local autoData = mainDirectory .. "autoData";
 local patternDirectory = mainDirectory .. "patterns/";
 local localeDirectory = mainDirectory .. "locale/";
 local filterDirectory = mainDirectory .. "inv_data/";
@@ -57,8 +58,8 @@ local dumperTurtle = nil;
 local size = nil;
 local mx, my = nil, nil;
 
-local isRestocking = false;
-local isAutocrafting = false;
+local isRestocking = true;
+local isAutocrafting = true;
 local renderSleep = 3;
 local doPrint = true;
 
@@ -145,6 +146,8 @@ local function saveFilter()
 end
 
 local function loadData()
+  if (not fs.exists(dataPath)) then return end
+
   local f = fs.open(dataPath, "r");
   inputAddr = f.readLine();
   redEnableAddr = f.readLine();
@@ -188,6 +191,8 @@ local function saveData()
 end
 
 local function loadDump()
+  if (not fs.exists(dumpData)) then return end
+  
   local f = fs.open(dumpData, "r");
   if (f == nil) then return end
   while true do
@@ -227,6 +232,49 @@ local function removeDump(item)
   saveDumps();
 end
 
+local function saveAuto(type, count)
+  local f = fs.open(autoData, "a");
+  f.writeLine(type .. " " .. count);
+  f.close();
+end
+
+local function saveAutos()
+  local f = fs.open(autoData, "w");
+  for type, count in pairs(autoLookup) do
+    f.writeLine(type .. " " .. count);
+  end
+  f.close();
+end
+
+local function loadAuto()
+  if (not fs.exists(autoData)) then return end
+
+  local f = fs.open(autoData, "r");
+  while true do
+    local line = f.readLine();
+    if (line == nil) then break end
+    local type = line:match("%S+");
+    local count = tonumber(line:match("%s(.+)"));
+    autoLookup[type] = count;
+  end
+  
+  f.close();
+end
+
+local function addAuto(type, count)
+  if (autoLookup[type] ~= nil) then return false; end
+  saveAuto(type, count);
+  autoLookup[type] = count;
+  return true;
+end
+
+local function removeAuto(type)
+  if (autoLookup[type] == nil) then return false; end
+  autoLookup[type] = nil;
+  saveAutos();
+  return true;
+end
+
 local function addTotal(name, count)
   totalLookup[name] = (totalLookup[name] or 0) + count;
 end
@@ -246,6 +294,7 @@ local function setup()
   else loadData(); end
   loadFilter();
   loadDump();
+  loadAuto();
 
   inputPeriph = InvUtils.wrap(PerUtils.get(inputAddr));
   recipePeriph = InvUtils.wrap(PerUtils.get(recipeAddr));
@@ -418,6 +467,40 @@ local function getCount(items)
   if (items[17] ~= nil) then return items[17].count; end
 end
 
+local function getPossible(recipe)
+  local costLookup = CraftingAPI.total(recipe, 1);
+  local smallest = 9999;
+  for type, cost in pairs(costLookup) do
+    local total = getTotal(type);
+    smallest = math.min(smallest, math.ceil(total / cost));
+  end
+  return smallest * recipe.count;
+end
+
+-- This is a hard algorithm
+-- so I need to somehow get how many barrels I can craft by seeing how many planks I can craft and how many slabs I can craft
+-- Let's say I have 60 planks, 20 slabs I could say that I can craft 10 Barrels since 60 / 6 and 20 / 2 is 10
+-- But let's say that I have 10 Oak Logs 
+-- I could craft 40 planks for the barrel which would make a total of 100 planks and 20 slabs, 
+-- still limited at crafting 10 barrels cause of the slabs
+-- or 40 planks into 78 slabs which means I could craft 10 barrels still
+-- or 40 more planks and split between the barrel and crafting the slabs
+-- so I guess like 20 planks for the barrel and 20 planks for the slabs?
+-- Which would mean 80 planks total and 56 slabs I thinks which would mean I can craft 13 barrels but alot of the slabs aren't used
+-- so I how do I properly estimate how many planks to use for the slabs and how many planks to use for the barrel
+-- local function getPossibleRecursive(recipe, usedLookup)
+--   local costLookup = CraftingAPI.total(recipe, 1);
+--   local smallest = math.huge;
+--   for type, cost in pairs(costLookup) do
+--     local total = getTotal(type);
+--     local subrecipe = CraftingAPI.get(type);
+--     local craftable = (subrecipe ~= nil and getPossibleRecursive(subrecipe, usedLookup)) or 0;
+--     local possible = math.ceil((total + craftable - (usedLookup[type] or 0)) / cost) * recipe.count;
+--     smallest = math.min(smallest, math.max(possible, 0));
+--   end
+--   return smallest;
+-- end
+
 --#region
 -- Problems that need solving
   -- Recipes that have resources that one needs the other resource in order to be crafted can be problematic
@@ -577,7 +660,7 @@ end
 
 local function tasks()
   while true do
-    if (isRestocking) then sleep(1);
+    if (not isRestocking) then sleep(1);
     else
       parallel.waitForAll(doStore, doDump, doCraft)
       if (enablePeriph.getInput("top")) then doRestock(); end
@@ -657,12 +740,8 @@ local function craftCMD(a1, a2, a3)
       printLookup(autoLookup, filter);
     elseif (a2 == "delete") then
       local type = a3;
-      if (autoLookup[type] == nil) then
-        print("Can't delete something that doesn't exist, no such autocraft.");
-        return
-      end
-      autoLookup[type] = nil;
-      print("Removed " .. type .. ".");
+      if (removeAuto(type)) then print("Removed " .. type .. ".");
+      else print("Can't delete something that doesn't exist, no such autocraft."); end
     elseif (a2 == "pause") then
       isAutocrafting = not isAutocrafting;
       if (isAutocrafting) then print("Unpausing...");
@@ -681,7 +760,7 @@ local function craftCMD(a1, a2, a3)
       count = tonumber(count);
       if (CraftingAPI.exists(name)) then
         print(name .. " will now try to be autocrafted to reach " .. count);
-        autoLookup[name] = count;
+        addAuto(name, count);
       else
         print("That isn't a valid recipe, how can I craft something of which does not exist...");
       end
@@ -689,9 +768,9 @@ local function craftCMD(a1, a2, a3)
   else
     local want = nil;
     if (a2 ~= nil) then want = tonumber(a2) end
-    isRestocking = true;
-    craft(a1, want);
     isRestocking = false;
+    craft(a1, want);
+    isRestocking = true;
   end
 end
 
@@ -719,7 +798,7 @@ end
 
 local function pauseCMD()
   isRestocking = not isRestocking;
-  if (isRestocking) then print(Localization.get("pause"));
+  if (not isRestocking) then print(Localization.get("pause"));
   else print(Localization.get("unpause")); end
 end
 
