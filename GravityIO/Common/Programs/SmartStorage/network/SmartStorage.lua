@@ -160,6 +160,7 @@ local function loadData()
   storageType = f.readLine();
   crafterAddr = f.readLine();
   dumperAddr = f.readLine();
+  crafterId = tonumber(f.readLine());
   f.close();
 end
 
@@ -180,6 +181,10 @@ local function saveData()
   crafterAddr = getPeripheral();
   detectUI("Dumper Turtle: ");
   dumperAddr = getPeripheral();
+  term.clear();
+  term.setCursorPos(1, 1);
+  write("Enter Crafting Turtle ID: ")
+  crafterId = tonumber(read());
 
   local f = fs.open(dataPath, "w");
   f.writeLine(inputAddr);
@@ -190,6 +195,7 @@ local function saveData()
   f.writeLine(storageType);
   f.writeLine(crafterAddr);
   f.writeLine(dumperAddr);
+  f.writeLine(crafterId);
   f.close();
 end
 
@@ -279,6 +285,7 @@ local function removeAuto(type)
 end
 
 local function addTotal(name, count)
+  
   totalLookup[name] = (totalLookup[name] or 0) + count;
 end
 
@@ -730,7 +737,7 @@ local function craftCMD(a1, a2, a3)
       local slot = toRegisterSlot[i];
       local item = items[slot];
       if (item ~= nil) then
-        pullItems(resources[i], recipeAddr, slot, 64);
+        pullItems(resources[i], recipeAddr, slot, item.count);
       end
     end
     pullItems(product, recipeAddr, 17, 64);

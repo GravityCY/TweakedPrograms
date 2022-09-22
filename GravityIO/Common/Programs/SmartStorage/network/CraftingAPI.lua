@@ -5,6 +5,16 @@ t.saveDirectory = "/data/craftingapi/recipes/";
 
 local recipeLookup = {};
 
+function t.Recipe(resources, product, count, nbt, tags)
+  local r = {};
+  r.resources = resources;
+  r.product = product;
+  r.count = count;
+  r.nbt = nbt;
+  r.tags = tags;
+  return r;
+end
+
 local function load()
   if (not fs.exists(t.saveDirectory)) then return end
   for _, namespace in ipairs(fs.list(t.saveDirectory)) do
@@ -28,32 +38,27 @@ local function load()
   end
 end
 
-function t.Recipe(resources, product, count)
-  local r = {};
-  r.resources = resources;
-  r.product = product;
-  r.count = count;
-  return r;
-end
-
 function t.setSaveDirectory(saveDirectory)
   t.saveDirectory = saveDirectory;
 end
 
-function t.save()
+local function saveRecipes()
   for product, recipe in pairs(recipeLookup) do
     t.saveRecipe(recipe);
   end
 end
 
-function t.saveRecipe(recipe)
-  local f = fs.open(t.saveDirectory .. ItemUtils.namespace(recipe.product) .. "/" .. ItemUtils.type(recipe.product), "w");
+local function saveRecipe(recipe)
+  local path = t.saveDirectory .. ItemUtils.namespace(recipe.product) .. "/" .. ItemUtils.type(recipe.product);
+  local f = fs.open(path, "w");
     for slot, resource in pairs(recipe.resources) do
-      f.write(slot .. "\n");
-      f.write(resource .. "\n");
+      f.writeLine(slot);
+      f.writeLine(resource);
     end
-    f.write("end\n");
-    f.write(recipe.count .. "\n");
+    f.writeLine("end");
+    f.writeLine(recipe.count);
+    f.writeLine(recipe.nbt);
+    f.writeLine(recipe.tags);
     f.close();
 end
 
@@ -84,7 +89,7 @@ function t.add(recipe)
   local k = recipe.product;
   if (t.exists(k)) then t.remove(k) end
   recipeLookup[k] = recipe;
-  t.saveRecipe(recipe);
+  saveRecipe(recipe);
 end
 
 function t.list()

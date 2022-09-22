@@ -3,7 +3,6 @@ t.saveDir = "/data/itemutils/items/"
 
 local cache = {};
 
-
 local function getCache(name)
   return cache[name];
 end

@@ -1,22 +1,31 @@
+local t = {};
+
 local sides = {};
-sides[0], sides.right = "right", 0;
-sides[1], sides.left = "left", 1;
+sides[0], sides.forward = "forward", 0;
+sides[1], sides.right = "right", 1;
 sides[2], sides.back = "back", 2;
-sides[3], sides.forward = "forward", 3;
-sides[4], sides.down = "down", 4;
-sides[5], sides.up = "up", 5;
+sides[3], sides.left = "left", 3;
+sides[4], sides.up = "up", 4;
+sides[5], sides.down = "down", 5;
+
+local hsides = {};
+hsides[sides.left] = -1;
+hsides[sides.right] = 1;
+
 local blacklist = {};
 blacklist["computercraft:turtle_normal"] = true;
 blacklist["computercraft:turtle_advanced"] = true;
 blacklist["computercraft:computer_normal"] = true;
 blacklist["computercraft:computer_advanced"] = true;
 
-local horizSides = {};
-horizSides.back = 0;
-horizSides.left = 1;
-horizSides.forward = 2;
-horizSides.right = 3;
 
+t.sides = sides;
+t.blacklist = blacklist;
+
+local facing = sides.forward;
+local px, py, pz = 0, 0, 0;
+
+local invSize = 16;
 
 local goSides = { [sides.forward]=turtle.forward,
                  [sides.down]=turtle.down,
@@ -39,9 +48,11 @@ local placeSides = { [sides.forward]=turtle.place,
 local inspectSides = { [sides.forward]=turtle.inspect,
                        [sides.down]=turtle.inspectDown,
                        [sides.up]=turtle.inspectUp };
+
 local compareSides = { [sides.forward]=turtle.compare,
                        [sides.down]=turtle.compareDown,
-                       [sides.up]=turtle.compareUp };                    
+                       [sides.up]=turtle.compareUp };   
+
 local dropSides = { [sides.forward]=turtle.drop,
                     [sides.down]=turtle.dropDown,
                     [sides.up]=turtle.dropUp };
@@ -49,15 +60,6 @@ local dropSides = { [sides.forward]=turtle.drop,
 local suckSides = { [sides.forward]=turtle.suck,
                     [sides.up]=turtle.suckUp,
                     [sides.down]=turtle.suckDown };
-
-local t = {};
-t.sides = sides;
-t.blacklist = blacklist;
-t.facing = sides.forward;
-
-local invSize = 16;
-
-local getItemDetail = turtle.getItemDetail;
 
 local function inBlacklist(side)
   local _, block = t.inspect(side);
@@ -73,18 +75,10 @@ local function diff(prev, new)
   end
 end
 
-function t.setFacing(side)
-  t.facing = side;
-end
-
-function t.getFacing()
-  return t.facing;
-end
-
 -- Will return a slot of an item based off ID
 function t.getSlot(id)
   for slot = 1, invSize do
-      local item = getItemDetail(slot);
+      local item = turtle.getItemDetail(slot);
       if (item and item.name == id) then return slot end
   end
 end
@@ -92,7 +86,7 @@ end
 -- Will return a slot of an item based off an item object
 function t.getSlotTab(tab)
   for slot = 1, invSize do
-      local item = getItemDetail(slot);
+      local item = turtle.getItemDetail(slot);
       if (item) then
           local same = false;
           for key, value in pairs(tab) do
@@ -106,7 +100,7 @@ end
 -- Will return any slot that isn't empty
 function t.getAnySlot()
   for i = 1, invSize do
-    local item = getItemDetail(i);
+    local item = turtle.getItemDetail(i);
     if (item) then return i end
   end
 end
@@ -139,17 +133,6 @@ function t.getSelectedItem()
   return turtle.getItemDetail(turtle.getSelectedSlot());
 end
 
-function t.selectItem(item, detail)
-  for i = 1, invSize do
-    local tItem = turtle.getItemDetail(i, detail);
-    for key, value in pairs(item) do
-      if (tItem) then
-        
-      end
-    end
-  end
-end
-
 -- Returns whether there are no completely empty slots left
 function t.full()
   local emptySlot = false;
@@ -161,7 +144,7 @@ end
 
 function t.list(detail)
   local itemMap = {};
-  for i = 1, invSize do itemMap[i] = getItemDetail(i, detail); end
+  for i = 1, invSize do itemMap[i] = turtle.getItemDetail(i, detail); end
   return itemMap
 end
 
@@ -188,7 +171,7 @@ end
 
 function t.dropRange(fromSlot, toSlot, amount, side)
   for i = fromSlot, toSlot do 
-    if (getItemDetail(i)) then
+    if (turtle.getItemDetail(i)) then
       t.drop(i, amount, side); 
     end
   end
@@ -207,10 +190,10 @@ end
 function t.suck(side, getSlot)
   getSlot = getSlot or false;
   local fn = suckSides[side];
-  if (fn) then 
+  if (fn) then
     local props = nil;
     local slot = nil;
-    if (getSlot) then 
+    if (getSlot) then
       local prev = t.list();
       props = {fn()};
       local new = t.list();
@@ -221,10 +204,57 @@ function t.suck(side, getSlot)
   end
 end
 
+-- If Facing Z+ and want to go back I want to do Z-
 -- Will move the turtle
 function t.go(side)
   local fn = goSides[side];
-  if (fn) then return fn(); end
+  if (fn) then
+    local data = fn();
+    if (data) then
+      if (side == sides.up) then py = py + 1;
+      elseif (side == sides.down) then py = py - 1;
+      elseif (facing == sides.forward) then
+        local s = {}
+        s[sides.forward] = 1;
+        s[sides.back] = -1;
+        px = px + s[side];
+      elseif (facing == sides.back) then
+        local s = {}
+        s[sides.forward] = -1;
+        s[sides.back] = 1;
+        px = px + s[side];
+      elseif (facing == sides.left) then
+        local s = {}
+        s[sides.forward] = -1;
+        s[sides.back] = 1;
+        pz = pz + s[side];
+      elseif (facing == sides.right) then
+        local s = {}
+        s[sides.forward] = 1;
+        s[sides.back] = -1;
+        pz = pz + s[side];
+      end
+    end
+    return data;
+  end
+end
+
+function t.getFacing()
+  return facing;
+end
+
+function t.setFacing(new)
+  facing = new;
+end
+
+function t.getPos()
+  return px, py, pz;
+end
+
+function t.setPos(x, y, z)
+  px = x;
+  py = y;
+  pz = z;
 end
 
 --[[
@@ -268,6 +298,8 @@ end
 function t.turn(side)
   local fn = turnSides[side];
   if (fn) then
+    local new = (facing + hsides[side]) % 4;
+    t.setFacing(new)
     return fn();
   end
 end
