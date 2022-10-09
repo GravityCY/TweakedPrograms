@@ -10,6 +10,7 @@ sides[5], sides.down = "down", 5;
 
 local hsides = {};
 hsides[sides.left] = -1;
+hsides[sides.back] = 2;
 hsides[sides.right] = 1;
 
 local blacklist = {};

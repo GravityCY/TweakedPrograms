@@ -14,7 +14,7 @@ local function load()
       if (line == nil) then break end
       if (line ~= "") then
         local key = line:match("%S+");
-        local value = line:match("%s(.+)");
+        local value = line:match("%s(.+)"):gsub("\\n", "\n");
         locale[key] = value;
       end
     end

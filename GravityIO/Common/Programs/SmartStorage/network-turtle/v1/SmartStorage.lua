@@ -38,7 +38,6 @@ CraftingAPI.init();
 -- Addresses
 local inputAddr = nil;
 local redEnableAddr = nil;
-local recipeAddr = nil;
 local overflowType = nil;
 local interfaceType = nil;
 local storageType = nil;
@@ -46,24 +45,19 @@ local crafterAddr = nil;
 local dumperAddr = nil;
 
 -- Peripherals
-local monitor = nil;
 local inputPeriph = nil;
-local recipePeriph = nil;
 local overflowList = nil;
-local interfaceList =nil;
+local interfaceList = nil;
 local storageList = nil;
 local enablePeriph = nil;
 local modemPeriph = nil;
 local crafterTurtle = nil;
 local dumperTurtle = nil;
 
-local size = nil;
-local mx, my = nil, nil;
 local tmx, tmy = nil, nil;
 
-local isRestocking = true;
-local isAutocrafting = true;
-local renderSleep = 3;
+local doTasks = true;
+local doAutocrafting = true;
 local doPrint = true;
 
 -- A list of list of filter items
@@ -86,8 +80,7 @@ local emptyList = {};
 -- tagLookup["minecraft:planks"] returns a total of planks in the system
 local tagLookup = {};
 
-local toCrafterSlot = {1, 2, 3, 5, 6, 7, 9, 10, 11};
-local toRegisterSlot = {4, 5, 6, 13, 14, 15, 22, 23, 24};
+local toTurtleSlot = {1, 2, 3, 5, 6, 7, 9, 10, 11};
 
 local function getPeripheral()
   local _, addr = os.pullEvent("peripheral");
@@ -153,11 +146,9 @@ local function loadData()
   if (not fs.exists(dataPath)) then return end
 
   local f = fs.open(dataPath, "r");
-  inputAddr = f.readLine();
   redEnableAddr = f.readLine();
   overflowType = f.readLine();
   interfaceType = f.readLine();
-  recipeAddr = f.readLine();
   storageType = f.readLine();
   crafterAddr = f.readLine();
   dumperAddr = f.readLine();
@@ -166,16 +157,12 @@ local function loadData()
 end
 
 local function saveData()
-  detectUI("Input Inventory: ");
-  inputAddr = getPeripheral();
   detectUI("Red Router Activation Block: ");
   redEnableAddr = getPeripheral();
   detectUI("Overflow Inventory\nJust Select 1 of the Inventories to Internally save the Type.");
   overflowType = peripheral.getType(getPeripheral());
   detectUI("Interface Inventory\nJust Select 1 of the Inventories to Internally save the Type.");
   interfaceType = peripheral.getType(getPeripheral());
-  detectUI("Recipe Register Inventory: ");
-  recipeAddr = getPeripheral();
   detectUI("Storage Inventory\nJust Select 1 of the Inventories to Internally save the Type.");
   storageType = peripheral.getType(getPeripheral());
   detectUI("Crafter Turtle: ");
@@ -188,11 +175,9 @@ local function saveData()
   crafterId = tonumber(read());
 
   local f = fs.open(dataPath, "w");
-  f.writeLine(inputAddr);
   f.writeLine(redEnableAddr);
   f.writeLine(overflowType);
   f.writeLine(interfaceType);
-  f.writeLine(recipeAddr);
   f.writeLine(storageType);
   f.writeLine(crafterAddr);
   f.writeLine(dumperAddr);
@@ -202,7 +187,7 @@ end
 
 local function loadDump()
   if (not fs.exists(dumpData)) then return end
-  
+
   local f = fs.open(dumpData, "r");
   if (f == nil) then return end
   while true do
@@ -307,19 +292,40 @@ local function setup()
   loadDump();
   loadAuto();
 
-  inputPeriph = InvUtils.wrap(PerUtils.get(inputAddr));
-  recipePeriph = InvUtils.wrap(PerUtils.get(recipeAddr));
   overflowList = PerUtils.getType(overflowType, true);
   interfaceList = InvUtils.wrapList(PerUtils.blacklistSides(PerUtils.getType(interfaceType, true)));
   storageList = PerUtils.getType(storageType, true);
   enablePeriph = PerUtils.get(redEnableAddr);
-  modemPeriph = peripheral.find("modem", rednet.open);
+  modemPeriph = peripheral.find("modem");
   crafterTurtle = PerUtils.get(crafterAddr);
   dumperTurtle = PerUtils.get(dumperAddr);
-  monitor = peripheral.find("monitor");
+  inputAddr = modemPeriph.getNameLocal();
+  inputPeriph = {
+    pushItems = function(toAddr, fromSlot, amount, toSlot)
+      local toPeriph = peripheral.wrap(toAddr);
+      return toPeriph.pullItems(inputAddr, fromSlot, amount, toSlot);
+    end,
+    pullItems = function(fromAddr, fromSlot, amount, toSlot)
+      local fromPeriph = peripheral.wrap(fromAddr);
+      return fromPeriph.pushItems(inputAddr, fromSlot, amount, toSlot);
+    end,
+    list = function()
+      local items = {};
+      for i = 1, 16 do
+        local item = turtle.getItemDetail(i);
+        if (item ~= nil) then
+          if (not ItemUtils.exists(item.name)) then
+            item = turtle.getItemDetail(i, true);
+            ItemUtils.add(item);
+          else ItemUtils.wrap(item); end
+        end
+        items[i] = item;
+      end
+      return items;
+    end
+  };
+  rednet.open(peripheral.getName(modemPeriph));
 
-  monitor.setTextScale(0.5)
-  mx, my = monitor.getSize();
   tmx, tmy = term.getSize();
 
   for _, p in ipairs(storageList) do SNAPI.add(peripheral.getName(p)); end
@@ -328,7 +334,6 @@ local function setup()
     local _, message = rednet.receive("list-end");
     return message;
   end
-  size = SNAPI.size();
   updateTotal();
 end
 
@@ -336,21 +341,10 @@ local function isFilterItem(type)
   return filterLookup[type] ~= nil
 end
 
-local function getFilledSlots()
-  local x = 0
-  for _, _ in pairs(SNAPI.list()) do x = x + 1 end
-  return x
-end
-
 local function toOverflow(fromAddr, slot, amount)
   local pushed = 0;
   for _, overflow in ipairs(overflowList) do
-    local push = 0;
-    if (fromAddr == "snapi") then
-      push = SNAPI.pushItems(overflow.addr, slot, amount - pushed);
-    else
-      push = overflow.pullItems(fromAddr, slot, amount - pushed);
-    end
+    local push = overflow.pullItems(fromAddr, slot, amount - pushed);
     pushed = pushed + push;
     if (pushed == amount) then break end
   end
@@ -378,17 +372,6 @@ local function pushItems(type, addr, slot, amount)
   return pushed;
 end
 
-local function toList()
-  local t = {}
-  local index = 1
-  for type, count in pairs(totalLookup) do
-    t[index] = {name=type, count=count}
-    index = index + 1
-  end
-  table.sort(t, function(x, y) return x.count > y.count end)
-  return t
-end
-
 local function pprint(...)
   if (doPrint) then print(...); end
 end
@@ -411,38 +394,6 @@ local function printLookup(lookup, filter)
     end
   end
   term.setTextColor(colors.white);
-end
-
-local function printMonitor(str, color)
-  local _, y = monitor.getCursorPos();
-  local pc = monitor.getTextColor();
-  monitor.setTextColor(color or pc);
-  monitor.write(str)
-  monitor.setCursorPos(1, y+1);
-  monitor.setTextColor(pc);
-end
-
-local function printItems()
-  local x = 2;
-  local column = 1;
-  local index = 1;
-  for _, item in pairs(toList()) do
-    local _, cy = monitor.getCursorPos();
-    if (item.count > 0) then
-      monitor.setTextColor(index);
-      index = math.max(index * 2 % 32768, 1);
-      if (cy ~= my) then
-        monitor.setCursorPos(x, cy);
-        printMonitor(Localization.get("monitorItemLine"):format(item.count, ItemUtils.format(item.name)));
-      else
-        if (column == 2) then break end
-        column = column + 1;
-        x = mx / 2;
-        monitor.setCursorPos(x, 6);
-      end
-    end
-  end
-  monitor.setTextColor(colors.white);
 end
 
 local function batch()
@@ -475,18 +426,18 @@ end
 local function getResources(items)
   local resources = {};
   for i = 1, 9 do
-    local item = items[toRegisterSlot[i]];
+    local item = items[toTurtleSlot[i]];
     if (item ~= nil) then resources[i] = item.name; end
   end
   return resources;
 end
 
 local function getProduct(items)
-  if (items[17] ~= nil) then return items[17].name; end
+  if (items[16] ~= nil) then return items[16].name; end
 end
 
 local function getCount(items)
-  if (items[17] ~= nil) then return items[17].count; end
+  if (items[16] ~= nil) then return items[16].count; end
 end
 
 local function getPossible(recipe)
@@ -660,7 +611,7 @@ local function craft(product, want, usedLookup)
     local sent = 0;
     for _ = 1, math.ceil(times / smallest) do
       for i, type in pairs(recipe.resources) do
-        push(crafterAddr, type, math.min(smallest, times - sent), toCrafterSlot[i]);
+        push(crafterAddr, type, math.min(smallest, times - sent), toTurtleSlot[i]);
       end
       sent = sent + smallest;
       rednet.send(crafterId, nil, "craft-start");
@@ -672,7 +623,7 @@ local function craft(product, want, usedLookup)
   end
 end
 
-local function doStore()
+local function storeTask()
   for slot, item in pairs(inputPeriph.list()) do
     if (isFilterItem(item.name)) then
       pullItems(item.name, inputAddr, slot, item.count);
@@ -689,7 +640,7 @@ local function doStore()
   emptyList = {};
 end
 
-local function doRestock()
+local function restockTask()
   local batchItems = batch();
   for addr, filterList in pairs(filtersLookup) do
     local interfaceItems = batchItems[toIndex(addr)];
@@ -707,7 +658,7 @@ local function doRestock()
   end
 end
 
-local function doDump()
+local function dumpTask()
   for item, dump in pairs(dumpLookup) do
     local total = totalLookup[item];
     if (total ~= nil and total >= dump) then
@@ -716,8 +667,8 @@ local function doDump()
   end
 end
 
-local function doCraft()
-  if (not isAutocrafting) then return end
+local function craftTask()
+  if (not doAutocrafting) then return end
 
   doPrint = false;
   for type, req in pairs(autoLookup) do
@@ -729,38 +680,12 @@ end
 
 local function tasks()
   while true do
-    if (not isRestocking) then sleep(1);
+    if (not doTasks) then sleep(1);
     else
-      parallel.waitForAll(doStore, doDump, doCraft)
-      if (enablePeriph.getInput("top")) then doRestock(); end
+      parallel.waitForAll(storeTask, dumpTask, craftTask)
+      if (enablePeriph.getInput("top")) then restockTask(); end
+      sleep(0);
     end
-  end
-end
-
-local function renderMonitor() 
-  local filledSlots = 0;
-  while true do
-    local newFilledSlots = getFilledSlots();
-    monitor.clear();
-    monitor.setCursorPos(1,1);
-    monitor.setCursorBlink(false);
-    local centColor = colors.lightGray;
-    local slotColor = colors.lightGray;
-    if (newFilledSlots > filledSlots) then
-      centColor = colors.green;
-      slotColor = colors.red;
-    elseif (newFilledSlots < filledSlots) then
-      centColor = colors.red;
-      slotColor = colors.green;
-    end
-    printMonitor(Localization.get("fillPercentText"));
-    printMonitor(Localization.get("fillPercentNum"):format(newFilledSlots / size * 100), centColor);
-    printMonitor(Localization.get("freeSlotsText"));
-    printMonitor(Localization.get("freeSlotsNum"):format(size - newFilledSlots), slotColor);
-    printMonitor(Localization.get("itemsStored"));
-    printItems();
-    filledSlots = newFilledSlots;
-    sleep(renderSleep);
   end
 end
 
@@ -818,22 +743,31 @@ local function craftCMD(a1, a2, a3)
       end
     end
   elseif (a1 == "new") then
-    print(Localization.get("craftNew1"));
-    print(Localization.get("craftNew2"));
-    read();
-    local items = recipePeriph.list();
+    term.clear();
+    term.setCursorPos(1, 1);
+    write(Localization.get("craftNew"));
+    doTasks = false;
+    while true do
+      local _, key = os.pullEvent("key");
+      if (key == keys.enter) then break end
+    end
+    local items = inputPeriph.list();
     local resources = getResources(items);
     local product = getProduct(items);
     local count = getCount(items);
     CraftingAPI.add(CraftingAPI.Recipe(resources, product, count));
     for i = 1, 9 do
-      local slot = toRegisterSlot[i];
+      local slot = toTurtleSlot[i];
       local item = items[slot];
       if (item ~= nil) then
-        pullItems(resources[i], recipeAddr, slot, item.count);
+        pullItems(resources[i], inputAddr, slot, item.count);
       end
     end
-    pullItems(product, recipeAddr, 17, 64);
+    pullItems(product, inputAddr, 16, count);
+    term.clear();
+    term.setCursorPos(1, 1);
+    print(Localization.get("craftNewComplete"):format(product));
+    doTasks = true;
   elseif (a1 == "delete") then
     local name = a2;
     if (name == nil) then
@@ -855,8 +789,8 @@ local function craftCMD(a1, a2, a3)
       if (removeAuto(type)) then print("Removed " .. type .. ".");
       else print("Can't delete something that doesn't exist, no such autocraft."); end
     elseif (a2 == "pause") then
-      isAutocrafting = not isAutocrafting;
-      if (isAutocrafting) then print("Unpausing...");
+      doAutocrafting = not doAutocrafting;
+      if (doAutocrafting) then print("Unpausing...");
       else print("Pausing..."); end
     else
       local name = a2;
@@ -908,9 +842,9 @@ local function craftCMD(a1, a2, a3)
   else
     local want = nil;
     if (a2 ~= nil) then want = tonumber(a2) end
-    isRestocking = false;
+    doTasks = false;
     craft(a1, want);
-    isRestocking = true;
+    doTasks = true;
   end
 end
 
@@ -921,8 +855,13 @@ end
 local function cleanCMD()
   for slot, item in pairs(SNAPI.list()) do
     if (not isFilterItem(item.name)) then
-      local pushed = toOverflow("snapi", slot, 64);
-      addTotal(item.name, pushed);
+      local pushed = 0;
+      for _, overflow in ipairs(overflowList) do
+        local pushAmount = SNAPI.pushItems(overflow.addr, slot, item.count - pushed);
+        pushed = pushed + pushAmount;
+        if (pushed == item.count) then break end
+      end
+      addTotal(item.name, -pushed);
     end
   end
 end
@@ -938,12 +877,13 @@ local function exitCMD()
 end
 
 local function pauseCMD()
-  isRestocking = not isRestocking;
-  if (not isRestocking) then print(Localization.get("pause"));
+  doTasks = not doTasks;
+  if (not doTasks) then print(Localization.get("pause"));
   else print(Localization.get("unpause")); end
 end
 
 local function filterCMD()
+  filterLookup = {};
   saveFilter();
   loadFilter();
 end
@@ -1019,5 +959,5 @@ local function onAttach()
 end
 
 setup();
-parallel.waitForAll(tasks, renderMonitor, renderPC, onAttach);
+parallel.waitForAll(tasks, renderPC, onAttach);
 
