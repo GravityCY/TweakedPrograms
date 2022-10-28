@@ -12,23 +12,6 @@ local function getPeripheral(periph)
   else return periph end
 end
 
--- local function where(before, after)
---   local w = {};
---   for slot, curItem in pairs(after) do
---     local prevItem = before[slot];
---     if (prevItem == nil) then 
---       where[slot] = curItem.count;
---       break;
---     elseif(prevItem.count ~= curItem.count) then
---       local amount = 0;
---       if (t.getItem) then amount = curItem.count;
---       else amount = curItem.count - prevItem.count; end
---       where[slot] = amount;
---     end
---   end
---   return w;
--- end
-
 function t.wrap(input)
   local p = getPeripheral(input);
   if (p == nil) then return end
@@ -176,15 +159,6 @@ function t.find(addr)
   local wrapped = {};
   for index, value in ipairs(peripherals) do wrapped[index] = t.wrap(value); end
   return wrapped;
-end
-
-function t.where(items, item, count, size)
-  local fit = 0;
-  for i = 1, size do
-    local si = items[i];
-    if (si == nil) then fit = count;
-    elseif (si.name == item.name)
-  end
 end
 
 return t;
