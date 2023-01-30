@@ -13,20 +13,33 @@ function Vector2.new(x, y)
   return t;
 end
 
-function Vector2.abs(vector)
-  return Vector2.new(math.abs(vector.x), math.abs(vector.y));
-end
-
 function Vector3.new(x, y, z)
-  local t = {};
-  t.x = x;
-  t.y = y;
-  t.z = z;
-  return t;
-end
+  local v = {};
+  v.x = 0;
+  v.y = 0;
+  v.z = 0;
 
-function Vector3.abs(vector)
-  return math.abs(vector.x), math.abs(vector.y), math.abs(vector.z);
+  if (x ~= nil) then v.x = x; end
+  if (y ~= nil) then v.y = y; end
+  if (z ~= nil) then v.z = z; end
+
+  function v.set(nx, ny, nz)
+    if (nx ~= nil) then v.x = nx; end
+    if (ny ~= nil) then v.y = ny; end
+    if (nz ~= nil) then v.z = nz; end
+  end
+
+  function v.add(nx, ny, nz)
+    if (nx ~= nil) then v.x = v.x + nx; end
+    if (ny ~= nil) then v.y = v.y + ny; end
+    if (nz ~= nil) then v.z = v.z + nz; end
+  end
+
+  function v.clone()
+    return Vector3.new(v.x, v.y, v.z);
+  end
+
+  return v;
 end
 
 return Vector;

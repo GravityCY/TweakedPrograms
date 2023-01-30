@@ -1,26 +1,24 @@
-local function getInput()
+local function isQuote(char)
+  return char == "\"" or char == "'";
+end
+
+local function parse(input)
   local args = {};
-  local input = read();
 
   local i = 1;
   while true do
     local str = "";
     local quote = nil;
     while true do
+      if (i > #input) then break end
       local char = input:sub(i, i);
-      if (char == "") then break end
-      if (char == "\"" or char == "\'") then
-        if (not quote) then 
-          quote = char;
-          i = i + 1;
-          char = input:sub(i, i);
-        elseif (char == quote) then break end
-      end
-      if (not quote) then
-        if (char == " ") then 
-          if (str ~= "") then break end
-        else str = str .. char; end
-      else str = str .. char; end
+      if (quote == nil and str ~= "" and char == " ") then break end
+
+      if (isQuote(char)) then
+        if (quote == nil) then quote = char;
+        elseif (quote ~= char) then str = str .. char;
+        else break end
+      elseif ((quote ~= nil and char == " ") or (char ~= " ")) then str = str .. char; end
       i = i + 1;
     end
     i = i + 1;
@@ -30,4 +28,4 @@ local function getInput()
   return args;
 end
 
-for k,v in pairs(getInput()) do write(k,v ) end
+for k,v in pairs(parse(read())) do print(k,v) end

@@ -1,7 +1,5 @@
 local t = {};
 
-local Vector3 = require("Vector").Vector3;
-
 local sides = {};
 sides[0], sides.forward = "forward", 0;
 sides[1], sides.right = "right", 1;
@@ -9,12 +7,6 @@ sides[2], sides.back = "back", 2;
 sides[3], sides.left = "left", 3;
 sides[4], sides.up = "up", 4;
 sides[5], sides.down = "down", 5;
-
-local directions = {};
-directions[0], directions.px = "+x", 0;
-directions[1], directions.pz = "+z", 1;
-directions[2], directions.nx = "-x", 2;
-directions[3], directions.nz = "-z", 3;
 
 local hsides = {};
 hsides[sides.left] = -1;
@@ -27,17 +19,12 @@ blacklist["computercraft:turtle_advanced"] = true;
 blacklist["computercraft:computer_normal"] = true;
 blacklist["computercraft:computer_advanced"] = true;
 
-local equip = {};
-equip[sides.left] = nil;
-equip[sides.right] = nil;
 
-t.directions = directions;
 t.sides = sides;
 t.blacklist = blacklist;
 
-local facing = directions.px;
-local pos = Vector3.new();
-local hasGPS = gps.locate() ~= nil;
+local facing = sides.forward;
+local px, py, pz = 0, 0, 0;
 
 local invSize = 16;
 
@@ -75,33 +62,18 @@ local suckSides = { [sides.forward]=turtle.suck,
                     [sides.up]=turtle.suckUp,
                     [sides.down]=turtle.suckDown };
 
-local equipSides = { [sides.left]=turtle.equipLeft,
-                     [sides.right]=turtle.equipRight};
-
-local function inBlacklist(id)
-  return t.blacklist[id] ~= nil;
+local function inBlacklist(side)
+  local _, block = t.inspect(side);
+  return block ~= nil and t.blacklist[block.name] ~= nil;
 end
 
-local function getDiff(prev, new)
+local function diff(prev, new)
   for i = 1, invSize do
     local pi = prev[i];
     local ni = new[i];
     if (not pi and ni) then return i end
     if ((pi and ni) and pi.count < ni.count) then return i end
   end
-end
-
--- 3 -> 2
-function t.face(nface)
-  local diff = nface - facing;
-  if (nface == 3 and facing == 0) then diff = -1; end
-  if (nface == 0 and facing == 3) then diff = 1; end
-  if (diff == 0) then return end
-  local turns = math.abs(diff);
-  local side = nil;
-  if (diff > 0) then side = sides.right;
-  elseif (diff < 0) then side = sides.left; end
-  for i = 1, turns do t.turn(side); end
 end
 
 -- Will return a slot of an item based off ID
@@ -119,8 +91,7 @@ function t.getSlotTab(tab)
       if (item) then
           local same = false;
           for key, value in pairs(tab) do
-              if (item[key] == value) then same = true;
-              else same = false; break end
+              if (item[key] == value) then same = true; end
           end
           if (same) then return slot; end
       end
@@ -131,15 +102,7 @@ end
 function t.getAnySlot()
   for i = 1, invSize do
     local item = turtle.getItemDetail(i);
-    if (item ~= nil) then return i end
-  end
-end
-
--- Will return any slot that is empty
-function t.getEmpty()
-  for i = 1, invSize do
-    local item = turtle.getItemDetail(i);
-    if (item == nil) then return i; end
+    if (item) then return i end
   end
 end
 
@@ -161,9 +124,10 @@ end
 -- Will select an item based off ID
 function t.selectID(id)
   local item = t.getSelectedItem();
-  if (item ~= nil and item.name == id) then return true end
+  if (item ~= nil and item.name == id) then return end
   local s = t.getSlot(id);
-  return s ~= nil and turtle.select(s);
+  if (s) then return turtle.select(s); end
+  return false;
 end
 
 function t.getSelectedItem()
@@ -171,10 +135,10 @@ function t.getSelectedItem()
 end
 
 -- Returns whether there are no completely empty slots left
-function t.isFull()
+function t.full()
   local emptySlot = false;
   for i = 1, invSize do
-    if (turtle.getItemDetail(i) == nil) then emptySlot = true; break end
+    if (not turtle.getItemDetail(i)) then emptySlot = true; break end
   end
   return not emptySlot;
 end
@@ -234,7 +198,7 @@ function t.suck(side, getSlot)
       local prev = t.list();
       props = {fn()};
       local new = t.list();
-      slot = getDiff(prev, new);
+      slot = diff(prev, new);
     else props = {fn()}; end
     if (props[1]) then return table.unpack(props), slot;
     else return table.unpack(props); end
@@ -245,32 +209,34 @@ end
 -- Will move the turtle
 function t.go(side)
   local fn = goSides[side];
-  if (fn ~= nil) then
-    local success, failReason = fn();
-    if (success) then
-      if (side == sides.forward) then
-        local mx = 0;
-        local mz = 0;
-        if (facing == directions.px) then mx = 1; end
-        if (facing == directions.nx) then mx = -1; end
-        if (facing == directions.pz) then mz = 1; end
-        if (facing == directions.nz) then mz = -1; end
-        pos.add(mx, 0, mz);
-      elseif (side == sides.back) then
-        local mx = 0;
-        local mz = 0;
-        if (facing == directions.px) then mx = -1; end
-        if (facing == directions.nx) then mx = 1; end
-        if (facing == directions.pz) then mz = -1; end
-        if (facing == directions.nz) then mz = 1; end
-        pos.add(mx, 0, mz);
-      elseif (side == sides.up) then
-        pos.add(0, 1, 0);
-      elseif (side == sides.down) then
-        pos.add(0, -1, 0);
+  if (fn) then
+    local data = fn();
+    if (data) then
+      if (side == sides.up) then py = py + 1;
+      elseif (side == sides.down) then py = py - 1;
+      elseif (facing == sides.forward) then
+        local s = {}
+        s[sides.forward] = 1;
+        s[sides.back] = -1;
+        px = px + s[side];
+      elseif (facing == sides.back) then
+        local s = {}
+        s[sides.forward] = -1;
+        s[sides.back] = 1;
+        px = px + s[side];
+      elseif (facing == sides.left) then
+        local s = {}
+        s[sides.forward] = -1;
+        s[sides.back] = 1;
+        pz = pz + s[side];
+      elseif (facing == sides.right) then
+        local s = {}
+        s[sides.forward] = 1;
+        s[sides.back] = -1;
+        pz = pz + s[side];
       end
     end
-    return success, failReason;
+    return data;
   end
 end
 
@@ -283,29 +249,50 @@ function t.setFacing(new)
 end
 
 function t.getPos()
-  return pos.clone();
+  return px, py, pz;
 end
 
 function t.setPos(x, y, z)
-  pos.set(x, y, z);
+  px = x;
+  py = y;
+  pz = z;
 end
 
-function t.goPos(gtx, gty, gtz)
-  local dx = gtx - pos.x;
-  local dy = gty - pos.y;
-  local dz = gtz - pos.z;
-  if (dx > 0) then t.face(directions.px)
-  elseif (dx < 0) then t.face(directions.nx); end
-  for x = 1, math.abs(dx) do t.go(sides.forward); end
+--[[
+  Will go to a position relative to it's self
+  5, 1, 2 means:
+  (x) 5 times forward relative to it's current facing direction, 
+  (y) 1 times up, 
+  (z) 2 times to the right relative to it's facing direction [Will turn right once and then forward 2 times]
 
-  local vs = nil;
-  if (dy < 0) then vs = sides.down;
-  elseif (dy > 0) then vs = sides.up; end
-  for y = 1, math.abs(dy) do t.go(vs); end
-
-  if (dz < 0) then t.face(directions.nz);
-  elseif (dz > 0) then t.face(directions.pz); end
-  for z = 1, math.abs(dz) do t.go(sides.forward); end
+  -5, -1, -2 means:
+  (x) 5 backward relative to it's current facing direction,
+  (y) 1 times down,
+  (z) 2 times to the left relative to it's facing direction [Will turn left once and then forward 2 times]
+  
+  Execution Flow: X then Y then Z meaning:
+  it will always go forward or back first, then up or down, then right or left.
+]]--
+function t.goPos(ix, iy, iz, onFail)
+  local frontSide = (ix > 0 and sides.forward) or sides.back;
+  local vertSide = (iy > 0 and sides.up) or sides.down;
+  local horizonSide = (iz > 0 and sides.right) or sides.left;
+  for x=1, math.abs(ix) do
+    if (not t.go(frontSide)) then
+      if (onFail ~= nil) then onFail(frontSide) end
+    end
+  end
+  for y=1, math.abs(iy) do
+    if (not t.go(vertSide)) then 
+      if (onFail ~= nil) then onFail(vertSide); end
+    end
+  end
+  if (iz ~= 0) then t.turn(horizonSide); end
+  for z=1, math.abs(iz) do
+    if (not t.go(sides.forward)) then 
+      if (onFail ~= nil) then onFail(sides.forward); end
+    end
+  end
 end
 
 -- Will turn (supports sides.back)
@@ -320,31 +307,20 @@ end
 
 -- Will dig
 function t.dig(side, getSlot)
-  local exists, block = t.inspect(side);
-  if (not exists) then return false, "nothing to dig"; end
-
-  if (getSlot == nil) then getSlot = false; end
-
+  getSlot = getSlot or false;
   local fn = digSides[side];
-  if (fn ~= nil and not inBlacklist(block.name)) then
+  if (fn and not inBlacklist(side)) then 
     local props = nil;
     local slot = nil;
     if (getSlot) then 
       local prev = t.list();
       props = {fn()};
       local new = t.list();
-      slot = getDiff(prev, new);
+      slot = diff(prev, new);
     else props = {fn()}; end
     if (props[1]) then return table.unpack(props), slot
     else return table.unpack(props); end
   end
-end
-
-function t.till(side)
-  local exists = t.inspect(side);
-  if (exists) then return false, "block in the way"; end
-  local fn = digSides[side];
-  if (fn ~= nil) then fn(); end
 end
 
 -- Will keep trying to dig and if failing waits
@@ -385,7 +361,6 @@ function t.place(side)
 end
 
 function t.placeDig(side)
-  if (turtle.getItemDetail() == nil) then return false end
   while true do
     local success = t.place(side);
     if (success) then break
@@ -403,87 +378,18 @@ function t.placeWait(side)
 end
 
 function t.placeID(side, id)
-  return t.selectID(id) and t.place(side);
+  t.selectID(id);
+  return t.place(side);
 end
 
 function t.isFluid(side)
   local found, block = t.inspect(side);
-  return found and block.state ~= nil and block.state.level ~= nil;
+  return found and block.name == "minecraft:lava" or block.name == "minecraft:water";
 end
 
 function t.isBlock(side)
-  return not t.isFluid(side);
-end
-
-function t.setupEquip()
-  if (not t.isFull()) then
-    turtle.select(t.getEmpty());
-  
-    turtle.equipLeft();
-    local left = turtle.getItemDetail();
-    if (left ~= nil) then
-      equip[sides.left] = left;
-      turtle.equipLeft();
-    end
-  
-    turtle.equipRight();
-    local right = turtle.getItemDetail();
-    if (right ~= nil) then
-      equip[sides.right] = right;
-      turtle.equipRight();
-    end
-
-    function t.getEquip(side)
-      return equip[side];
-    end
-
-    function t.equip(side)
-      if (equip[side] ~= nil) then return false end
-      local item = t.getSelectedItem();
-      equip[side] = item;
-      local fn = equipSides[side];
-      if (fn ~= nil) then fn(); end
-      return true;
-    end
-    
-    function t.unequip(side)
-      if (equip[side] == nil or t.isFull()) then return false end
-      equip[side] = nil;
-      local fn = equipSides[side];
-      if (fn ~= nil) then fn(); end
-      return true;
-    end
-
-    return true;
-  end
-  return false;
-end
-
-function t.setupGPS()
-  if (hasGPS and turtle.getFuelLevel() >= 1) then
-    local x, y, z = gps.locate();
-    t.setPos(x, y, z);
-    if (t.inspect(sides.forward) == nil) then
-      t.go(sides.forward);
-      local nx, _, nz = gps.locate();
-      local dx, dz = nx - x, nz - z;
-      if (dx ~= 0) then
-        if (dx == 1) then
-          t.setFacing(directions.px);
-        elseif dx == -1 then
-          t.setFacing(directions.nx);
-        end
-      elseif (dz ~= 0) then
-        if (dz == 1) then
-          t.setFacing(directions.pz);
-        elseif (dz == -1) then
-          t.setFacing(directions.nz);
-        end
-      end
-      return true;
-    end
-  end
-  return false;
+  local found, block = t.inspect(side);
+  return found and block.name ~= "minecraft:lava" and block.name ~= "minecraft:water";
 end
 
 return t;

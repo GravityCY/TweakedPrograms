@@ -1,10 +1,10 @@
-local tUtils = require("TurtleUtils");
-local sides = tUtils.sides;
+local bt = require("BetterTurtle");
+local sides = bt.sides;
 
 local modem = peripheral.find("modem");
 rednet.open(peripheral.getName(modem));
 
-tUtils.blacklist["occultism:stable_wormhole"] = true;
+bt.blacklist["occultism:stable_wormhole"] = true;
 
 local distance = 0;
 local megaID = 0;
@@ -15,13 +15,13 @@ local function doRep(fn, times, ...)
 end
 
 local function move()
-  tUtils.goDig(sides.forward);
-  tUtils.dig(sides.up);
-  tUtils.dig(sides.down);
+  bt.goDig(sides.forward);
+  bt.dig(sides.up);
+  bt.dig(sides.down);
 end
 
 local function back()
-  tUtils.goWait(sides.forward);
+  bt.goWait(sides.forward);
 end
 
 local function receiveFrom(iid, protocol)
@@ -45,16 +45,16 @@ end
 local function gotoPlacement()
   write("Going to Placement...");
   if (place == 1) then
-    tUtils.goDig(sides.forward);
-    tUtils.goDig(sides.down);
+    bt.goDig(sides.forward);
+    bt.goDig(sides.down);
   else
-    doRep(tUtils.goDig, place - 1, sides.forward);
-    tUtils.goDig(sides.down);
-    tUtils.turn(sides.left);
-    tUtils.goDig(sides.forward);
+    doRep(bt.goDig, place - 1, sides.forward);
+    bt.goDig(sides.down);
+    bt.turn(sides.left);
+    bt.goDig(sides.forward);
   end
-  tUtils.dig(sides.up);
-  tUtils.dig(sides.down);
+  bt.dig(sides.up);
+  bt.dig(sides.down);
 end
 
 local function setupDistance()
@@ -75,14 +75,14 @@ end
 local function dumpItems()
   receiveFrom(megaID, "dump");
   write("Dumping Items...");
-  tUtils.turn(sides.left);
-  doRep(tUtils.goDig, place - 1, sides.forward);
-  tUtils.turn(sides.left);
+  bt.turn(sides.left);
+  doRep(bt.goDig, place - 1, sides.forward);
+  bt.turn(sides.left);
   for i = 1, 16 do
     local item = turtle.getItemDetail(i);
-    if (item) then tUtils.drop(i, 64, sides.down); end
+    if (item) then bt.drop(i, 64, sides.down); end
   end
-  tUtils.goWait(sides.forward);
+  bt.goWait(sides.forward);
 end
 
 local function main()

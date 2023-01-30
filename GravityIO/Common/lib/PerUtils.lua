@@ -7,21 +7,10 @@ For example you can get all peripherals based off of a key within those peripher
 ]]
 
 local p = {};
-local sides = { top=true, left=true, right=true, bottom=true, back=true, front=true };
 
 local function default(defaultInput, value)
   if (value == nil) then return defaultInput;
   else return value; end
-end
-
-local function getPeripheral(doGet, addr)
-  if (doGet) then return p.get(addr); end
-  return addr;
-end
-
-local function getAddress(doGet, periph)
-  if (doGet) then return peripheral.getName(periph); end
-  return periph;
 end
 
 local function toPeripheral(obj)
@@ -36,14 +25,20 @@ local function toAddress(obj)
   elseif(t == "string") then return obj; end
 end
 
-function p.wrap(per)
-  per.addr = peripheral.getName(per);
-  per.id, per.perType = peripheral.getType(per.addr);
-  per.namespace = per.addr:match("(.-):") or "computercraft";
-  per.id = per.addr:match("(.+)_");
-  per.type = per.addr:match(":(.+)_") or per.id;
-  per.index = tonumber(per.addr:match(".+_(.+)$"));
-  return per;
+-- per.addr         = minecraft:barrel_0          | modem_0
+-- per.id, per.type = minecraft:barrel, inventory | modem, nil
+-- per.namespace    = minecraft                   | computercraft
+-- per.name         = barrel                      | modem
+-- per.index        = 0                           | 0
+
+function p.wrap(pp)
+  if (pp == nil) then return end
+  pp.addr = peripheral.getName(pp);
+  pp.id, pp.type = peripheral.getType(pp.addr);
+  pp.namespace = pp.addr:match("(.-):") or "computercraft";
+  pp.name = pp.addr:match(":(.+)_") or pp.id;
+  pp.index = tonumber(pp.addr:match(".+_(.+)$"));
+  return pp;
 end
 
 --- Given a table of addresses `addrsList` returns a table of peripherals from those addresses
@@ -61,7 +56,6 @@ end
 ---@param pList table
 ---@return table
 function p.toAddressList(pList)
-
   local addrList = {};
   for _, periph in ipairs(pList) do
     addrList[#addrList+1] = toAddress(periph);
@@ -70,34 +64,41 @@ function p.toAddressList(pList)
 end
 
 --- Returns a table of all peripherals, as a peripheral or an address according to the `asPeriph` boolean
---- @param asPeriph boolean
+--- @param asPeriph boolean | nil
 --- @return table
 function p.getAll(asPeriph)
-  asPeriph = (asPeriph ~= nil and asPeriph) or true;
+  asPeriph = default(true, asPeriph);
 
   local t = {};
   for _, name in ipairs(peripheral.getNames()) do
-    t[#t+1] = getPeripheral(asPeriph, name);
+    local out = name;
+    if (asPeriph) then out = p.get(out) end
+    t[#t+1] = out;
   end
   return t;
 end
 
 --- Given a string `addr` returns a wrapped peripheral
 --- @param addr string
---- @return table
+--- @return table | nil
 function p.get(addr)
   local per = peripheral.wrap(addr);
-  if (per == nil) then return nil end
   return p.wrap(per);
 end
 
---- Given a string `type` returns a table with peripherals of the type matching the `type` string
---- @param type string
---- @param asPeriph boolean
---- @return table
 function p.getType(type, asPeriph)
-  local all = p.getAll(asPeriph);
-  return p.whitelist(all, {[type] = true})
+  local t = {};
+
+  for _, addr in ipairs(p.getAll(false)) do
+    local name, tt = peripheral.getType(addr);
+    if (tt == type) then
+      local out = addr;
+      if (asPeriph) then out = p.get(addr); end
+      t[#t+1] = out;
+    end
+  end
+
+  return t;
 end
 
 --- Given a string returns a table with peripherals that contain a key matching that string
@@ -108,8 +109,12 @@ function p.getKey(key, asPeriph)
   asPeriph = default(true, asPeriph);
 
   local t = {};
-  for _, periph in ipairs(p.getAll(asPeriph)) do
-    if (periph[key] ~= nil) then t[#t+1] = getAddress(not asPeriph, periph) end
+  for _, periph in ipairs(p.getAll()) do
+    if (periph[key] ~= nil) then
+      local out = periph;
+      if (not asPeriph) then out = out.addr; end
+      t[#t+1] = out;
+    end
   end
   return t;
 end
@@ -127,97 +132,17 @@ function p.getCustom(fn, asPeriph)
   return t;
 end
 
---- Given a filter string will return any peripheral that contains the filter as a substring
---- @param filter table
---- @param asPeriph boolean
---- @return table
-function p.getSimilar(filter, asPeriph)
-  filter = filter:lower();
-  
-  local similar = {};
-  for index, name in ipairs(peripheral.getNames()) do
-    if (name:lower():find(filter)) then
-      similar[#similar+1] = getPeripheral(asPeriph, name);
-    end 
+function p.find(addr, asPeriph)
+  asPeriph = default(true, asPeriph);
+  local t = {};
+  for i, pp in ipairs(p.getAll()) do
+    if (pp.id == addr) then
+      local out = pp;
+      if (not asPeriph) then out = pp.addr; end
+      t[#t+1] = out;
+    end
   end
-  return similar;
-end
-
-
--- Given a list of peripherals and a blacklist of peripheral types will return a filtered list of the first list without the second list of the blacklisted peripheral types.
--- 
--- Blacklist should be a lookup table
--- 
--- Example:
--- 
---     local blacklist = {["minecraft:chest"]=true, ["minecraft:barrel"]=true};
----@param t table
----@param bl table
----@return table
-function p.blacklist(t, bl)
-  local ot = {};
-  for _, ap in ipairs(t) do
-    local pp = toPeripheral(ap);
-    local type = peripheral.getType(pp);
-    if (bl[type] == nil) then ot[#ot+1] = pp end
-  end
-  return ot;
-end
-
-
---- Given a list of peripherals will return a filtered list of all the peripherals except any side peripherals.
---- @param t table
---- @return table
-function p.blacklistSides(t)
-  local ot = {};
-  for _, ap in ipairs(t) do
-    local pp = toPeripheral(ap);
-    local addr = toAddress(ap);
-    if (not sides[addr]) then ot[#ot+1] = ap end
-  end
-  return ot;
-end
-
-
---- Given a list of peripherals and a whitelist of peripheral types will return a filtered list of the first list without the second list of the whitelisted peripheral types.
---- 
---- Whitelist should be a lookup table
---- 
---- Example:
---- 
----     local whitelist = {["minecraft:chest"]=true, ["minecraft:barrel"]=true};
----@param t table
----@param wl table
----@return table
-function p.whitelist(t, wl)
-  local ot = {};
-  for _, ap in ipairs(t) do
-    local pp = toPeripheral(ap);
-    local type = peripheral.getType(pp);
-    if (wl[type]) then ot[#ot+1] = pp end
-  end
-  return ot;
-end
-
-function p.whitelistType(t, wl)
-  local ot = {};
-  for _, ap in ipairs(t) do
-    local pp = toPeripheral(ap);
-    local _, ptype = peripheral.getType(pp);
-    if (wl[ptype]) then ot[#ot+1] = pp end
-  end
-  return ot;
-end
-
---- Given a list of peripherals will return a filtered list of all the side peripherals.
---- @return table
-function p.whitelistSides(t)
-  local ot = {};
-  for _, ap in ipairs(t) do
-    local addr = toAddress(ap);
-    if (sides[addr]) then ot[#ot+1] = ap end
-  end
-  return ot;
+  return t;
 end
 
 return p;

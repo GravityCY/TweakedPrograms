@@ -65,7 +65,6 @@ local function batch()
   return items;
 end
 
-
 -- Given a path will save all of it's data
 function sn.save(path)
   local file = fs.open(path.."data", "w");

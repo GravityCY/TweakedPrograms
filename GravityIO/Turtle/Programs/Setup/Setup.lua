@@ -1,77 +1,65 @@
-local PerUtils = require("PerUtils");
+local Command = require("Command");
+local pu = require("PerUtils");
+local diskDrive = (pu.find("drive"))[1];
+local invsInput = pu.getType("inventory");
 
-local args = { ... };
+local name = "Test";
+local programs = {};
 
-local drive = peripheral.find("drive");
-local driveAddr = peripheral.getName(drive);
-local invs = PerUtils.getByKey("list", true);
-local modem = peripheral.find("modem");
-local addr = modem.getNameLocal();
-
-local nbt = "4d1eb2f00be8854cd02b4ae0ca1c04b2";
-
-local dupeFiles = {};
-
-local function copyFiles()
-  local mountPath = drive.getMountPath();
-  for _, filePath in ipairs(dupeFiles) do
-    local out = mountPath .. "/" .. filePath;
-    if (fs.exists(filePath)) then
-      if (fs.exists(out)) then fs.delete(out) end
-      fs.copy(filePath, out);
-    end
+local cmdPrograms = Command.new("programs", "adds programs", 1, -1);
+cmdPrograms.setFunction(function(args)
+  for _, path in ipairs(args) do
+    table.insert(programs, path);
   end
-end
+end);
 
-local function setupId(inv, slot)
-  inv.pushItems(driveAddr, slot, 1, 1);
-  copyFiles();
-  inv.pullItems(driveAddr, 1, 1);
-end
-
-local function setupNon(inv, slot)
-  inv.pushItems(addr, slot, 1, 1);
-  turtle.place();
-  repeat sleep(0) until peripheral.wrap("front") ~= nil;
-  peripheral.wrap("front").turnOn();
-  turtle.dig();
-  inv.pullItems(addr, 1, 1, inv.size());
-  inv.pushItems(driveAddr, inv.size(), 1, 1);
-  copyFiles();
-  inv.pullItems(driveAddr, 1, 1);
-end
-
-turtle.select(1);
-
-if (args[1] ~= nil) then
-  if (fs.exists(args[1])) then
-    local f = fs.open(args[1], "r");
-    while true do
-      local line = f.readLine();
-      if (line == nil) then break end
-      table.insert(dupeFiles, line);
-    end
-    f.close();
+local cmdHelp = Command.new("help", "helps");
+cmdHelp.setFunction(function() 
+  for alias, cmd in pairs(Command.getCommands()) do
+    print(("%s - %s"):format(alias, cmd.description));
   end
-else
+end)
+
+Command.add(cmdPrograms);
+Command.add(cmdHelp);
+
+local function isQuote(char)
+  return char == "\"" or char == "'";
+end
+
+local function parse(input)
+  local args = {};
+
+  local i = 1;
   while true do
-    write("Enter File Path to Include (Type Fin to Finish): ");
-    local input = read():lower();
-    if (input == "fin") then break end
-    table.insert(dupeFiles, input);
+    local str = "";
+    local quote = nil;
+    while true do
+      if (i > #input) then break end
+      local char = input:sub(i, i);
+      if (quote == nil and str ~= "" and char == " ") then break end
+
+      if (isQuote(char)) then
+        if (quote == nil) then quote = char;
+        elseif (quote ~= char) then str = str .. char;
+        else break end
+      elseif ((quote ~= nil and char == " ") or (char ~= " ")) then str = str .. char; end
+      i = i + 1;
+    end
+    i = i + 1;
+    if (str == "") then break end
+    table.insert(args, str);
+  end
+  return args;
+end
+
+local function main()
+  while true do
+    local inputString = read();
+    local inputArgs = parse(inputString);
+    local state, errorMessage = Command.parse(inputArgs);
+    print(errorMessage);
   end
 end
 
-for _, inv in ipairs(invs) do
-  for slot, item in pairs(inv.list()) do
-    if (item.name == "computercraft:turtle_normal") then
-      if (item.nbt == nbt) then
-        for i = 1, item.count do
-          setupNon(inv, slot);
-        end
-      else
-        setupId(inv, slot);
-      end
-    end
-  end
-end
+main();

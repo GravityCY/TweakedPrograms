@@ -27,11 +27,11 @@ local aliases = {};
 ops.add = {};
 ops.add.desc="Adds a new Todo";
 ops.add.fn = function(input)
-  local todoTitle = input[2] or requestInput("Enter Title: ");
+  local todoTitle = input[1] or requestInput("Enter Title: ");
   local todoDescription = nil;
   if (not TodoList.exists(todoTitle)) then
     if (input[3] ~= nil) then
-      todoDescription = TableUtils.toString(TableUtils.range(input, 3), " ");
+      todoDescription = TableUtils.toString(TableUtils.range(input, 2), " ");
     else
       todoDescription = requestInput("Enter Content: ");
     end
@@ -54,7 +54,8 @@ ops.edit = {};
 ops.edit.desc = "Edits a Todo";
 ops.edit.alias = {"ed"};
 ops.edit.fn = function(input)
-  local todoTitle = input[2] or requestInput("Enter Todo Title: ");
+  local todoTitle = TableUtils.toString(input, " ");
+  if (todoTitle == "") then todoTitle = requestInput("Enter Todo Title: "); end
   if (TodoList.exists(todoTitle)) then
     local todoDescription = TableUtils.toString(TableUtils.range(input, 3), " ") or requestInput("Enter Content: ");
     TodoList.edit(todoTitle, todoTitle, todoDescription):
@@ -112,6 +113,6 @@ while true do
   term.clear();
   term.setCursorPos(1, 1);
   local op = ops[opInput] or aliases[opInput];
-  if (op) then op.fn(input);
+  if (op) then op.fn(TableUtils.range(input, 2));
   else ops.help.fn(); end
 end

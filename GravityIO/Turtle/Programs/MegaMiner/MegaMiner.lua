@@ -1,5 +1,5 @@
-local tUtils = require("TurtleUtils");
-local sides = tUtils.sides;
+local bt = require("BetterTurtle");
+local sides = bt.sides;
 
 local modem = peripheral.find("modem");
 rednet.open(peripheral.getName(modem));
@@ -34,7 +34,6 @@ local function setup()
   doReturn = args[2] or tobool(requestInput("Should Return? (False / True): "));
   outSlot = args[3] or tonumber(requestInput("Enter Slot of Shulker to Dump: "));
   botSlot = args[3] or tonumber(requestInput("Enter Slot of Shulker with Turtles: "));
-  botName = turtle.getItemDetail(botSlot);
 end
 
 local function receiveSendDistance()
@@ -79,16 +78,16 @@ end
 
 local function place()
   write("Placing...");
-  tUtils.goDig(sides.up);
+  bt.goDig(sides.up);
   turtle.select(botSlot);
-  tUtils.placeDig(sides.down);
+  bt.placeDig(sides.down);
   while true do
-    local s = tUtils.getSlot("computercraft:turtle_normal");
-    if (s) then
+    local s = bt.getSlot("computercraft:turtle_normal");
+    if (s ~= nil) then
       robots = robots + 1;
-      if (robots == 2) then tUtils.turn(sides.right); end
+      if (robots == 2) then bt.turn(sides.right); end
       turtle.select(s);
-      tUtils.placeDig(sides.up);
+      bt.placeDig(sides.up);
       repeat sleep(0) until peripheral.wrap("top");
       local t = peripheral.wrap("top");
       local id = t.getID();
@@ -96,65 +95,65 @@ local function place()
       t.turnOn();
       respond(id, robots, "enabled");
     else
-      local success = tUtils.suck(sides.down);
+      local success = bt.suck(sides.down);
       if (not success) then break end
     end
   end
   turtle.select(botSlot);
-  tUtils.dig(sides.down);
-  if (robots > 1) then tUtils.turn(sides.left); end
+  bt.dig(sides.down);
+  if (robots > 1) then bt.turn(sides.left); end
   write("Finished Placing...");
   receiveSendDistance();
   sleep(0.5);
 end
 
 local function goStart()
-  tUtils.turn(sides.back);
-  tUtils.goDig(sides.up);
-  doRep(tUtils.goDig, distance, sides.forward);
-  tUtils.turn(sides.back);
-  tUtils.goDig(sides.down);
+  bt.turn(sides.back);
+  bt.goDig(sides.up);
+  doRep(bt.goDig, distance, sides.forward);
+  bt.turn(sides.back);
+  bt.goDig(sides.down);
 end
 
 local function start()
   write("Starting...");
-  tUtils.blacklist["computercraft:turtle_normal"] = true;
+  bt.blacklist["computercraft:turtle_normal"] = true;
   sendToAll(distance, "start");
-  doRep(tUtils.goWait, distance, sides.forward);
+  doRep(bt.goWait, distance, sides.forward);
   write("Finished Mining...");
 end
 
 local function dump()
   write("Dumping...");
-  tUtils.goDig(sides.down);
+  bt.goDig(sides.down);
   turtle.select(outSlot);
-  tUtils.placeDig(sides.forward);
+  bt.placeDig(sides.forward);
   turtle.select(botSlot);
-  tUtils.placeDig(sides.down);
+  bt.placeDig(sides.down);
   turtle.select(1);
-  tUtils.dropAll(sides.forward);
+  bt.dropAll(sides.forward);
   sleep(0.5);
   sendToAll(nil, "dump");
 end
 
 local function recover()
   write("Recovering...");
-  tUtils.blacklist["computercraft:turtle_normal"] = nil;
+  bt.blacklist["computercraft:turtle_normal"] = nil;
   for i = 1, robots do
     while true do
-      local success = tUtils.dig(sides.up);
+      local success = bt.dig(sides.up);
       if (success) then 
-        local slot = tUtils.getSlot("computercraft:turtle_normal");
-        tUtils.drop(slot, _, sides.down); 
+        local slot = bt.getSlot("computercraft:turtle_normal");
+        bt.drop(slot, _, sides.down); 
         break 
       end
       sleep(0.25);
     end
   end
   turtle.select(botSlot);
-  tUtils.dig(sides.down);
+  bt.dig(sides.down);
   turtle.select(outSlot);
-  tUtils.dig(sides.forward);
+  bt.dig(sides.forward);
   write("Finished Recovery...");
 end
 

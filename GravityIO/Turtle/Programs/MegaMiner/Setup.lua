@@ -1,11 +1,11 @@
-local tUtils = require("TurtleUtils");
-local sides = tUtils.sides;
+local bt = require("BetterTurtle");
+local sides = bt.sides;
 
 local executions = {...};
 
-tUtils.dig(sides.forward);
-tUtils.selectID("computercraft:disk_drive");
-tUtils.place(sides.forward);
+bt.dig(sides.forward);
+bt.selectID("computercraft:disk_drive");
+bt.place(sides.forward);
 repeat sleep(0) until (peripheral.wrap("front"))
 local ddp = peripheral.wrap("front");
 
@@ -37,7 +37,7 @@ local function format()
     sleep(0);
     repeat sleep(0) until (peripheral.wrap("front"))
     peripheral.wrap("front").turnOn();
-    local success, slot = tUtils.dig(sides.forward, true);
+    local success, slot = bt.dig(sides.forward, true);
     turtle.down();
     turtle.drop();
   end
@@ -67,10 +67,10 @@ end
 while true do
   local slot, turt = getTurtle();
   if (not turt) then break end
-  tUtils.drop(slot, 1, sides.forward);
+  bt.drop(slot, 1, sides.forward);
   format();
-  local success, slot = tUtils.suck(sides.forward, true);
+  local success, slot = bt.suck(sides.forward, true);
   processed[turtle.getItemDetail(slot, true).nbt] = true;
 end
 turtle.select(1);
-tUtils.dig(sides.forward);
+bt.dig(sides.forward);
